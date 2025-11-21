@@ -96,6 +96,12 @@ function listOccurrences(params) {
   if (params.assessor_name) rows = rows.filter(r => String(r['assessor_name']) === String(params.assessor_name));
   if (params.type_name) rows = rows.filter(r => String(r['type_name']) === String(params.type_name));
   if (params.status) rows = rows.filter(r => String(r['status']) === String(params.status));
+  if (params.turno) {
+    rows = rows.filter(r => {
+      const turno = detectShift(r);
+      return turno && String(turno).toUpperCase() === String(params.turno).toUpperCase();
+    });
+  }
 
   // date filter (date_time stored as ISO string 'YYYY-MM-DDTHH:MM:SS' or Date object)
   const parseDate = v => {
@@ -130,6 +136,18 @@ function listOccurrences(params) {
   const pageRows = rows.slice(startIndex, startIndex + pageSize);
 
   return { total: total, page: page, pageSize: pageSize, rows: pageRows };
+}
+
+/** Deduz turno MT/SN a partir do campo shift/turno ou horário */
+function detectShift(row) {
+  if (!row) return '';
+  const explicit = row['shift'] || row['turno'] || row['turn'] || row['periodo'];
+  if (explicit) return String(explicit).toUpperCase();
+  if (row['date_time']) {
+    const dt = row['date_time'] instanceof Date ? row['date_time'] : new Date(String(row['date_time']));
+    if (dt && !isNaN(dt)) return dt.getHours() < 18 ? 'MT' : 'SN';
+  }
+  return '';
 }
 
 /** Recupera uma ocorrência por id */
@@ -193,36 +211,47 @@ function createOccurrence(form) {
   const occurrenceId = generateOccurrenceId(dt);
   const createdAt = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd'T'HH:mm:ss");
 
-  const row = [
-    occurrenceId,
-    Utilities.formatDate(dt, tz, "yyyy-MM-dd'T'HH:mm:ss"),
-    form.assessor_id || '',
-    form.assessor_name || '',
-    form.type_name || '',
-    form.origin || '',
-    form.priority || '',
-    form.status || 'Aberta',
-    form.description || '',
-    form.action_taken || '',
-    form.follow_up_date || '',
-    form.attachments || '',
-    form.related_case_id || '',
-    getCurrentUserEmail(),
-    createdAt,
-    '', ''
-  ];
+  const headers = master.getRange(1,1,1,master.getLastColumn()).getValues()[0];
+  const newRow = Array(headers.length).fill('');
+  const setField = (key, value) => {
+    const idx = headers.indexOf(key);
+    if (idx >= 0) newRow[idx] = value;
+  };
 
-  master.appendRow(row);
+  setField('occurrence_id', occurrenceId);
+  setField('date_time', Utilities.formatDate(dt, tz, "yyyy-MM-dd'T'HH:mm:ss"));
+  setField('assessor_id', form.assessor_id || '');
+  setField('assessor_name', form.assessor_name || '');
+  setField('type_name', form.type_name || '');
+  setField('origin', form.origin || '');
+  setField('priority', form.priority || '');
+  setField('status', form.status || 'Aberta');
+  setField('description', form.description || '');
+  setField('action_taken', form.action_taken || '');
+  setField('follow_up_date', form.follow_up_date || '');
+  setField('attachments', form.attachments || '');
+  setField('related_case_id', form.related_case_id || '');
+  setField('created_by', getCurrentUserEmail());
+  setField('created_at', createdAt);
+  setField('shift', form.shift || '');
+  setField('turno', form.shift || '');
+  setField('turn', form.shift || '');
+
+  master.appendRow(newRow);
 
   // audit
   const audit = ss.getSheetByName(AUDIT_SHEET);
-  if (audit) audit.appendRow([Utilities.getUuid(), occurrenceId, createdAt, getCurrentUserEmail(), 'CREATE', '', JSON.stringify(row), '']);
+  if (audit) audit.appendRow([Utilities.getUuid(), occurrenceId, createdAt, getCurrentUserEmail(), 'CREATE', '', JSON.stringify(newRow), '']);
 
   return { success: true, id: occurrenceId };
 }
 
 /** Atualiza ocorrência por id (data = objeto com campos para atualizar) */
 function updateOccurrence(id, data) {
+  if (typeof id === 'object' && data === undefined) { // suporte a chamada via {id, data}
+    data = id.data;
+    id = id.id;
+  }
   if (!id) throw new Error('id vazio');
   const ss = SpreadsheetApp.getActive();
   const master = ss.getSheetByName(MASTER_SHEET);
@@ -285,6 +314,9 @@ function getDashboardData() {
   const total = all.length;
   const byStatus = {};
   const byType = {};
+  const byDay = {};
+  const byShift = { MT:0, SN:0 };
+  const openVsClosed = { abertas:0, concluidas:0 };
   const lastList = all.slice(0,10); // ordered already by date desc in listOccurrences, but here gets original order; we'll sort
   // garantir ordenação por date desc
   lastList.sort((a,b) => new Date(b['date_time'] || 0) - new Date(a['date_time'] || 0));
@@ -296,6 +328,11 @@ function getDashboardData() {
     byStatus[st] = (byStatus[st] || 0) + 1;
     const t = r['type_name'] || 'Outros';
     byType[t] = (byType[t] || 0) + 1;
+    const dayKey = (r['date_time'] || '').toString().slice(0,10);
+    if (dayKey) byDay[dayKey] = (byDay[dayKey] || 0) + 1;
+    const turno = detectShift(r);
+    if (turno && byShift[turno] !== undefined) byShift[turno] += 1;
+    if ((String(st).toLowerCase().indexOf('conclu') >= 0)) openVsClosed.concluidas += 1; else openVsClosed.abertas += 1;
     if ((String(st).toLowerCase().indexOf('conclu') >= 0) && r['created_at'] && r['updated_at']) {
       const d1 = new Date(r['created_at']);
       const d2 = new Date(r['updated_at']);
@@ -312,7 +349,9 @@ function getDashboardData() {
   const sorted = all.slice().sort((a,b) => new Date(b['date_time']||0) - new Date(a['date_time']||0));
   const latest = sorted.slice(0,10);
 
-  return { total, byStatus, byType, avgResolutionDays: avgResolution, latest };
+  const totalsByDay = Object.keys(byDay).sort((a,b)=> new Date(b) - new Date(a)).slice(0,7).map(day => ({day:day, total: byDay[day]}));
+
+  return { total, byStatus, byType, avgResolutionDays: avgResolution, latest, totalsByDay, byShift, openVsClosed };
 }
 
 /** Recupera audit log (opcional filtro por occurrence_id) */

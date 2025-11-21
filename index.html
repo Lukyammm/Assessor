@@ -7,40 +7,64 @@
   <style>
     :root{
       --navy:#123456;
-      --accent:#2F80ED;
-      --muted:#9aa6b2;
-      --bg:#f5f7f9;
+      --blue:#02689C;
+      --blue-soft:#f0fbff;
+      --gray:#efefef;
+      --gray-2:#dbe7f1;
+      --muted:#5d6b7a;
       --card:#ffffff;
-      --radius:10px;
+      --radius:12px;
+      --shadow:0 8px 26px rgba(18,52,86,0.12);
     }
-    body{ font-family: Inter, Roboto, Arial; margin:0; background:var(--bg); color:#222; }
-    header{ background:linear-gradient(90deg, #0f3556, #123456); color:#fff; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; }
-    header h1{ font-size:18px; margin:0; letter-spacing:0.2px; }
+    *{ box-sizing:border-box; }
+    body{ font-family: 'Inter', 'Roboto', Arial, sans-serif; margin:0; background:linear-gradient(180deg, var(--blue-soft), #f6f9fc); color:#0f1f33; }
+    header{ background:var(--navy); color:#fff; padding:16px 24px; display:flex; align-items:center; justify-content:space-between; box-shadow:var(--shadow); position:sticky; top:0; z-index:5; }
+    header h1{ font-size:18px; margin:0; letter-spacing:0.2px; display:flex; align-items:center; gap:10px; }
+    header h1::before{ content:'⚕️'; font-size:18px; }
     header .actions{ display:flex; gap:10px; align-items:center; }
-    button.btn{ background:var(--accent); color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600; }
-    button.ghost{ background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.12); padding:6px 10px; }
-    main{ padding:18px; max-width:1200px; margin:20px auto; }
-    .card{ background:var(--card); border-radius:var(--radius); padding:14px; box-shadow: 0 1px 6px rgba(16,24,40,0.06); margin-bottom:14px;}
-    .filters{ display:flex; gap:10px; flex-wrap:wrap; align-items:end; }
-    label{ font-size:13px; color:var(--muted); }
-    input[type="text"], input[type="date"], select, textarea { padding:8px 10px; border-radius:8px; border:1px solid #e6eef6; background:#fff; }
-    table{ width:100%; border-collapse:collapse; font-size:13px; }
-    th,td{ padding:8px 10px; text-align:left; border-bottom:1px solid #f1f3f5;}
-    .row-actions button{ margin-right:6px; }
-    .two-cols{ display:grid; grid-template-columns: 1fr 380px; gap:16px; align-items:start; }
+    button.btn{ background:var(--blue); color:#fff; border:none; padding:9px 14px; border-radius:10px; cursor:pointer; font-weight:600; box-shadow:0 6px 16px rgba(2,104,156,0.25); transition:transform .08s ease, box-shadow .08s ease; }
+    button.btn:hover{ transform:translateY(-1px); box-shadow:0 10px 20px rgba(2,104,156,0.28); }
+    button.ghost{ background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.25); padding:7px 12px; border-radius:10px; }
+    main{ padding:22px; max-width:1200px; margin:0 auto; display:flex; flex-direction:column; gap:16px; }
+    .card{ background:var(--card); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); margin-bottom:0; border:1px solid var(--gray-2); }
+    .filters{ display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:12px; align-items:end; }
+    label{ font-size:13px; color:var(--muted); font-weight:600; }
+    input[type="text"], input[type="date"], select, textarea { padding:9px 10px; border-radius:10px; border:1px solid var(--gray-2); background:#fff; width:100%; }
     .small{ font-size:12px; color:var(--muted); }
+    .pill{ padding:6px 10px; border-radius:999px; font-size:12px; display:inline-flex; gap:6px; align-items:center; font-weight:600; }
+    .pill.aberta{ background:#e1f1fb; color:var(--blue); }
+    .pill.andamento{ background:#fff1df; color:#f6a63b; }
+    .pill.concluida{ background:#e4f6eb; color:#22c55e; }
+    .pill.cancelada{ background:#eef1f5; color:#9aa6b2; }
+    .pill.turno{ background:#eef6ff; color:var(--navy); }
+    .pill.meta{ background:var(--gray); color:var(--navy); font-weight:700; }
+    .timeline{ display:flex; flex-direction:column; gap:12px; }
+    .day-block{ border-left:4px solid var(--blue); padding-left:12px; }
+    .day-header{ display:flex; align-items:center; justify-content:space-between; background:var(--blue-soft); padding:10px 12px; border-radius:10px; border:1px solid var(--gray-2); font-weight:700; color:var(--navy); }
+    .occ-card{ background:#fff; border-radius:12px; border:1px solid var(--gray-2); padding:12px; box-shadow:0 4px 16px rgba(18,52,86,0.1); display:flex; flex-direction:column; gap:6px; }
+    .occ-top{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .occ-id{ font-weight:800; color:var(--navy); }
+    .occ-meta{ font-size:12px; color:var(--muted); display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .occ-desc{ font-size:13px; color:#1f2b3a; background:var(--blue-soft); padding:8px 10px; border-radius:10px; border:1px solid var(--gray-2); }
+    .occ-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+    .list-empty{ text-align:center; color:var(--muted); padding:24px 0; }
     /* modal */
     .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; z-index:9999;}
-    .modal{ width:720px; max-width:95%; background:#fff; border-radius:12px; padding:16px; box-shadow: 0 6px 24px rgba(16,24,40,0.2) }
-    .modal header{ display:flex; align-items:center; justify-content:space-between; }
-    .form-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
+    .modal{ width:760px; max-width:95%; background:#fff; border-radius:16px; padding:16px; box-shadow: 0 12px 34px rgba(16,24,40,0.28); border:1px solid var(--gray-2); }
+    .modal header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .form-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;}
     .attachments-list{ margin-top:8px; font-size:13px; }
-    .pill{ background:#f1f7ff; color:var(--navy); padding:6px 8px; border-radius:999px; font-size:12px; display:inline-block; margin-right:6px;}
+    .section-title{ font-weight:700; color:var(--navy); margin:16px 0 8px 0; font-size:14px; }
     .center{ text-align:center; }
-    @media(max-width:900px){ .two-cols{ grid-template-columns: 1fr; } }
+    .dashboard-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; }
+    .stat-card{ background:#fff; border:1px solid var(--gray-2); padding:12px; border-radius:12px; box-shadow:0 6px 20px rgba(18,52,86,0.08); }
+    .stat-title{ font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.4px; }
+    .stat-value{ font-size:22px; font-weight:800; color:var(--navy); }
+    .list-chips{ display:flex; gap:8px; flex-wrap:wrap; }
+    @media(max-width:700px){ header{flex-direction:column; align-items:flex-start; gap:10px;} .occ-top{flex-direction:column; align-items:flex-start;} }
   </style>
 </head>
-<body>
+  <body>
   <header>
     <h1>NAC — Ocorrências (Web App)</h1>
     <div class="actions">
@@ -52,22 +76,26 @@
 
   <main>
     <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
         <div>
-          <h3 style="margin:0 0 6px 0;">Ocorrências</h3>
-          <div class="small">Lista de registros — busque, filtre e abra para editar.</div>
+          <h3 style="margin:0 0 6px 0; color:var(--navy);">Fluxo de Ocorrências (NAC)</h3>
+          <div class="small">Organizado por dia → turno → ocorrência, como na planilha do plantão.</div>
         </div>
         <div class="small" id="summaryTop"></div>
       </div>
 
       <div style="margin-top:12px" class="filters">
         <div>
-          <label>Busca</label><br>
-          <input type="text" id="searchInput" placeholder="ID, assessor ou texto..." style="width:260px">
+          <label>Dia</label><br>
+          <input type="date" id="filterStart">
         </div>
         <div>
-          <label>Assessor</label><br>
-          <select id="filterAssessor"><option value="">(todos)</option></select>
+          <label>Até</label><br>
+          <input type="date" id="filterEnd">
+        </div>
+        <div>
+          <label>Turno</label><br>
+          <select id="filterTurno"><option value="">(todos)</option><option>MT</option><option>SN</option></select>
         </div>
         <div>
           <label>Tipo</label><br>
@@ -78,12 +106,8 @@
           <select id="filterStatus"><option value="">(todos)</option><option>Aberta</option><option>Em andamento</option><option>Concluída</option><option>Cancelada</option></select>
         </div>
         <div>
-          <label>De</label><br>
-          <input type="date" id="filterStart">
-        </div>
-        <div>
-          <label>Até</label><br>
-          <input type="date" id="filterEnd">
+          <label>Busca rápida</label><br>
+          <input type="text" id="searchInput" placeholder="ID, assessor ou texto...">
         </div>
         <div style="align-self:end;">
           <button class="btn" id="btnSearch">Buscar</button>
@@ -91,11 +115,10 @@
       </div>
 
       <div style="margin-top:14px;" id="listArea"></div>
-      <div id="pagination" style="margin-top:10px; text-align:right;"></div>
     </div>
 
     <div class="card">
-      <h4 style="margin:0 0 8px 0;">Dashboard</h4>
+      <h4 style="margin:0 0 8px 0; color:var(--navy);">Painel rápido</h4>
       <div id="dashArea" class="small">Carregando indicadores...</div>
     </div>
   </main>
@@ -133,7 +156,7 @@
     // ---------- STATE ----------
     let CONFIG = null;
     let CURRENT_PAGE = 1;
-    const PAGE_SIZE = 20;
+    const PAGE_SIZE = 200; // timeline visual - carregamos bloco maior para agrupar por dia
 
     // ---------- INIT ----------
     function init() {
@@ -152,13 +175,6 @@
     }
 
     function populateFilters(res) {
-      const aSel = $('filterAssessor');
-      aSel.innerHTML = '<option value="">(todos)</option>';
-      (res.assessores || []).forEach(a => {
-        const name = a.assessor_name || a.name || a.assessor;
-        const opt = document.createElement('option'); opt.value = name; opt.textContent = name;
-        aSel.appendChild(opt);
-      });
       const tSel = $('filterType'); tSel.innerHTML = '<option value="">(todos)</option>';
       (res.tipos||[]).forEach(t => {
         const name = t.type_name || t.name;
@@ -172,73 +188,106 @@
       const params = {
         page: CURRENT_PAGE, pageSize: PAGE_SIZE,
         search: $('searchInput').value || '',
-        assessor_name: $('filterAssessor').value || '',
         type_name: $('filterType').value || '',
         status: $('filterStatus').value || '',
         startDate: $('filterStart').value || '',
-        endDate: $('filterEnd').value || ''
+        endDate: $('filterEnd').value || '',
+        turno: $('filterTurno').value || ''
       };
       promiseCall('listOccurrences', params).then(res => {
-        renderList(res.rows || [], res.total || 0, res.page || 1, res.pageSize || PAGE_SIZE);
+        renderList(res.rows || [], res.total || 0);
       }).catch(e => { console.error(e); alert('Erro ao listar'); });
     }
 
-    function renderList(rows, total, page, pageSize) {
+    function renderList(rows, total) {
       const area = $('listArea'); area.innerHTML = '';
-      if (!rows.length) { area.innerHTML = '<div class="small center">Sem registros</div>'; $('summaryTop').textContent = ''; $('pagination').innerHTML=''; return; }
-      // tabela
-      const tbl = document.createElement('table');
-      const thead = document.createElement('thead');
-      thead.innerHTML = '<tr><th>ID</th><th>Data</th><th>Assessor</th><th>Tipo</th><th>Status</th><th>Descrição</th><th>Ações</th></tr>';
-      tbl.appendChild(thead);
-      const tbody = document.createElement('tbody');
-      rows.forEach(r => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${r.occurrence_id||''}</td>
-                        <td>${(r.date_time||'')}</td>
-                        <td>${r.assessor_name||''}</td>
-                        <td>${r.type_name||''}</td>
-                        <td>${r.status||''}</td>
-                        <td>${(r.description||'').slice(0,120).replace(/\n/g,' ')}${(r.description||'').length>120?'...':''}</td>
-                        <td class="row-actions"></td>`;
-        const actions = tr.querySelector('.row-actions');
-        const viewBtn = document.createElement('button'); viewBtn.className='btn'; viewBtn.style.padding='6px 8px'; viewBtn.textContent='Abrir';
-        viewBtn.addEventListener('click', ()=> openViewModal(r.occurrence_id));
-        const editBtn = document.createElement('button'); editBtn.className='btn'; editBtn.style.background='#2bb673'; editBtn.style.marginLeft='6px'; editBtn.textContent='Editar';
-        editBtn.addEventListener('click', ()=> openEditModal(r.occurrence_id));
-        const delBtn = document.createElement('button'); delBtn.className='btn'; delBtn.style.background='#ff6b6b'; delBtn.style.marginLeft='6px'; delBtn.textContent='Cancelar';
-        delBtn.addEventListener('click', ()=> { if(confirm('Confirmar cancelar esta ocorrência?')) deleteRec(r.occurrence_id); });
-        actions.appendChild(viewBtn); actions.appendChild(editBtn); actions.appendChild(delBtn);
-        tbody.appendChild(tr);
-      });
-      tbl.appendChild(tbody);
-      area.appendChild(tbl);
+      if (!rows.length) { area.innerHTML = '<div class="list-empty">Sem registros para o filtro escolhido.</div>'; $('summaryTop').textContent = ''; return; }
 
-      // resumo e paginação
-      $('summaryTop').textContent = `Mostrando ${Math.min(total, (page-1)*pageSize+1)}–${Math.min(total,page*pageSize)} de ${total}`;
-      renderPagination(total, page, pageSize);
+      const groups = groupByDay(rows);
+      const frag = document.createDocumentFragment();
+      let count = 0;
+      Object.keys(groups).sort((a,b)=> new Date(b) - new Date(a)).forEach(dayKey => {
+        const block = document.createElement('div'); block.className='day-block';
+        const header = document.createElement('div'); header.className='day-header';
+        header.innerHTML = `<span>📅 ${formatDateDisplay(dayKey)}</span><span class="pill meta">${groups[dayKey].length} ocorrências</span>`;
+        block.appendChild(header);
+
+        const list = document.createElement('div'); list.className='timeline';
+        groups[dayKey].sort((a,b)=> new Date(b.date_time||0) - new Date(a.date_time||0)).forEach(r => {
+          count++;
+          const turno = inferTurno(r);
+          const card = document.createElement('div'); card.className='occ-card';
+          const statusPill = buildStatusPill(r.status);
+          const turnoPill = `<span class="pill turno">${turno||'—'}</span>`;
+          card.innerHTML = `
+            <div class="occ-top">
+              <div class="occ-id">[${r.occurrence_id||''}]</div>
+              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">${turnoPill}${statusPill}</div>
+            </div>
+            <div class="occ-meta">
+              <span>${formatTime(r.date_time)}</span>
+              <span>•</span>
+              <span>${r.type_name||'Tipo não informado'}</span>
+              <span>•</span>
+              <span>Assessor: ${r.assessor_name||'—'}</span>
+            </div>
+            <div class="occ-desc">${(r.description||'').split('\n')[0] || 'Sem descrição'}</div>
+            <div class="occ-actions"></div>
+          `;
+          const actions = card.querySelector('.occ-actions');
+          const open = document.createElement('button'); open.className='btn'; open.textContent='Abrir'; open.style.padding='6px 10px'; open.addEventListener('click', ()=> openViewModal(r.occurrence_id));
+          const edit = document.createElement('button'); edit.className='btn'; edit.style.background='#22c55e'; edit.textContent='Editar'; edit.style.padding='6px 10px'; edit.addEventListener('click', ()=> openEditModal(r.occurrence_id));
+          const cancel = document.createElement('button'); cancel.className='btn'; cancel.style.background='#9aa6b2'; cancel.textContent='Cancelar'; cancel.style.padding='6px 10px'; cancel.addEventListener('click', ()=> { if(confirm('Confirmar cancelar esta ocorrência?')) deleteRec(r.occurrence_id); });
+          actions.appendChild(open); actions.appendChild(edit); actions.appendChild(cancel);
+          list.appendChild(card);
+        });
+        block.appendChild(list);
+        frag.appendChild(block);
+      });
+      area.appendChild(frag);
+      $('summaryTop').textContent = `${count} ocorrências exibidas`;    
     }
 
-    function renderPagination(total, page, pageSize) {
-      const pages = Math.ceil(total / pageSize) || 1;
-      const el = $('pagination'); el.innerHTML = '';
-      if (pages <= 1) return;
-      const start = Math.max(1, page-2);
-      const end = Math.min(pages, page+2);
-      if (page>1) {
-        const p1 = document.createElement('button'); p1.className='btn'; p1.textContent='‹ Prev'; p1.addEventListener('click', ()=> { CURRENT_PAGE--; loadList(); });
-        el.appendChild(p1);
-      }
-      for (let p = start; p <= end; p++) {
-        const b = document.createElement('button'); b.textContent=p; b.style.margin='0 4px';
-        if (p===page) { b.style.fontWeight='700'; b.style.background='#e6f2ff'; }
-        b.addEventListener('click', ()=> { CURRENT_PAGE = p; loadList(); });
-        el.appendChild(b);
-      }
-      if (page < pages) {
-        const pn = document.createElement('button'); pn.className='btn'; pn.textContent='Next ›'; pn.addEventListener('click', ()=> { CURRENT_PAGE++; loadList(); });
-        el.appendChild(pn);
-      }
+    function buildStatusPill(status) {
+      const s = (status||'Aberta').toLowerCase();
+      let cls = 'aberta', label='Aberta';
+      if (s.indexOf('andamento')>=0) { cls='andamento'; label='Em andamento'; }
+      else if (s.indexOf('conclu')>=0) { cls='concluida'; label='Concluída'; }
+      else if (s.indexOf('cancel')>=0) { cls='cancelada'; label='Cancelada'; }
+      return `<span class="pill ${cls}">${label}</span>`;
+    }
+
+    function groupByDay(rows) {
+      const out = {};
+      rows.forEach(r => {
+        const day = r.date_time instanceof Date ? r.date_time.toISOString().slice(0,10) : (String(r.date_time||'').slice(0,10) || 'sem-data');
+        if (!out[day]) out[day] = [];
+        out[day].push(r);
+      });
+      return out;
+    }
+
+    function formatDateDisplay(isoDate) {
+      if (!isoDate) return '—';
+      const [y,m,d] = isoDate.split('-');
+      return `${d}/${m}/${y}`;
+    }
+
+    function formatTime(dateTime) {
+      if (!dateTime) return '—';
+      const dt = new Date(dateTime);
+      if (isNaN(dt)) return dateTime;
+      return dt.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+    }
+
+    function inferTurno(row) {
+      if (!row) return '';
+      const explicit = row.shift || row.turno || row.turn || row.periodo;
+      if (explicit) return String(explicit).toUpperCase();
+      const dt = new Date(row.date_time);
+      if (!dt || isNaN(dt)) return '';
+      const h = dt.getHours();
+      return h < 18 ? 'MT' : 'SN';
     }
 
     // ---------- CRUD MODALS ----------
@@ -268,22 +317,40 @@
       const body = document.createElement('div'); body.style.marginTop='8px';
       const html = document.createElement('div');
       html.innerHTML = `
+        <div class="section-title">Dados principais</div>
         <div class="form-grid">
           <div>
             <label>Data</label><br>
-            <input type="date" id="m_date"><br>
+            <input type="date" id="m_date">
+          </div>
+          <div>
+            <label>Turno (MT / SN)</label><br>
+            <select id="m_shift"><option>MT</option><option>SN</option></select>
           </div>
           <div>
             <label>Hora</label><br>
-            <input type="time" id="m_time" value="09:00"><br>
-          </div>
-          <div>
-            <label>Assessor (nome)</label><br>
-            <input type="text" id="m_assessor_name">
+            <input type="time" id="m_time" value="09:00">
           </div>
           <div>
             <label>Tipo</label><br>
             <select id="m_type_name"></select>
+          </div>
+          <div>
+            <label>Quem notifica (assessor)</label><br>
+            <input type="text" id="m_assessor_name">
+          </div>
+          <div>
+            <label>Status</label><br>
+            <select id="m_status"><option>Aberta</option><option>Em andamento</option><option>Concluída</option><option>Cancelada</option></select>
+          </div>
+        </div>
+        <div class="section-title">Descrição</div>
+        <textarea id="m_description" style="width:100%; min-height:110px;"></textarea>
+        <div class="section-title">Complementos</div>
+        <div class="form-grid">
+          <div>
+            <label>Follow-up</label><br>
+            <input type="date" id="m_follow">
           </div>
           <div>
             <label>Origem</label><br>
@@ -293,26 +360,13 @@
             <label>Prioridade</label><br>
             <select id="m_priority"><option>Baixa</option><option selected>Média</option><option>Alta</option><option>Crítica</option></select>
           </div>
-          <div>
-            <label>Status</label><br>
-            <select id="m_status"><option>Aberta</option><option>Em andamento</option><option>Concluída</option><option>Cancelada</option></select>
-          </div>
-          <div>
-            <label>Follow up</label><br>
-            <input type="date" id="m_follow">
-          </div>
-          <div style="grid-column:1 / -1;">
-            <label>Descrição</label><br>
-            <textarea id="m_description" style="width:100%; min-height:100px;"></textarea>
-          </div>
-          <div style="grid-column:1 / -1;">
-            <label>Anexos</label><br>
-            <input type="file" id="m_files" multiple><div class="attachments-list" id="m_attachments"></div>
-          </div>
         </div>
-        <div style="margin-top:10px; text-align:right;">
-          <button class="btn" id="m_saveBtn">Salvar</button>
+        <div class="section-title">Anexos</div>
+        <input type="file" id="m_files" multiple>
+        <div class="attachments-list" id="m_attachments"></div>
+        <div style="margin-top:14px; text-align:right; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
           <button class="ghost" id="m_cancelBtn">Fechar</button>
+          <button class="btn" id="m_saveBtn">Salvar</button>
         </div>
       `;
       body.appendChild(html);
@@ -331,6 +385,7 @@
         const d = opts.data || {};
         $('m_date').value = (d.date_time||'').slice(0,10);
         $('m_time').value = (d.date_time||'').slice(11,16);
+        $('m_shift').value = inferTurno(d) || 'MT';
         $('m_assessor_name').value = d.assessor_name || '';
         $('m_type_name').value = d.type_name || '';
         $('m_origin').value = d.origin || '';
@@ -338,6 +393,8 @@
         $('m_status').value = d.status || 'Aberta';
         $('m_follow').value = d.follow_up_date || '';
         $('m_description').value = d.description || '';
+        $('m_shift').disabled = true;
+        ['m_date','m_time','m_assessor_name','m_type_name','m_origin','m_priority','m_status','m_follow','m_description'].forEach(id=> $(id).setAttribute('disabled','disabled'));
         $('m_files').style.display = 'none';
         $('m_saveBtn').style.display = 'none';
         // attachments links
@@ -353,6 +410,7 @@
           const d = opts.data;
           $('m_date').value = (d.date_time||'').slice(0,10);
           $('m_time').value = (d.date_time||'').slice(11,16) || '09:00';
+          $('m_shift').value = inferTurno(d) || 'MT';
           $('m_assessor_name').value = d.assessor_name || '';
           $('m_type_name').value = d.type_name || '';
           $('m_origin').value = d.origin || '';
@@ -370,7 +428,7 @@
           $('m_saveBtn').textContent = 'Salvando...'; $('m_saveBtn').disabled=true;
           // processar anexos (ler files e enviar para server)
           const files = $('m_files').files;
-          const attachmentsUrls = [];
+          const attachmentsUrls = (opts.data && opts.data.attachments) ? String(opts.data.attachments).split(';').filter(Boolean) : [];
           for (let i=0; i<files.length; i++) {
             const f = files[i];
             const base64 = await fileToBase64(f);
@@ -390,12 +448,14 @@
           const obj = {
             date: $('m_date').value,
             time: $('m_time').value,
+            shift: $('m_shift').value,
             assessor_name: $('m_assessor_name').value,
             type_name: $('m_type_name').value,
             origin: $('m_origin').value,
             priority: $('m_priority').value,
             status: $('m_status').value,
             description: $('m_description').value,
+            follow_up_date: $('m_follow').value,
             attachments: attachmentsUrls.join(';')
           };
           if (opts.mode === 'create') {
@@ -433,23 +493,32 @@
       $('dashArea').textContent = 'Carregando...';
       promiseCall('getDashboardData', null).then(data => {
         const html = [];
-        html.push(`<div style="display:flex; gap:12px; flex-wrap:wrap;">`);
-        html.push(`<div style="background:#fff; padding:12px; border-radius:10px; min-width:160px;"><div class="small">Total</div><div style="font-size:20px; font-weight:700">${data.total||0}</div></div>`);
-        html.push(`<div style="background:#fff; padding:12px; border-radius:10px; min-width:160px;"><div class="small">Avg Resolução (dias)</div><div style="font-size:20px; font-weight:700">${data.avgResolutionDays ? data.avgResolutionDays.toFixed(1) : '—'}</div></div>`);
-        html.push(`</div>`);
-        html.push('<div style="margin-top:10px;">');
-        html.push('<div style="display:flex; gap:12px; flex-wrap:wrap;">');
-        html.push('<div style="min-width:240px;"><h4 style="margin:6px 0 8px 0;">Por Status</h4>');
-        for (let k in data.byStatus) html.push(`<div class="pill">${k}: ${data.byStatus[k]}</div>`);
+        html.push('<div class="dashboard-grid">');
+        html.push(`<div class="stat-card"><div class="stat-title">Total</div><div class="stat-value">${data.total||0}</div></div>`);
+        html.push(`<div class="stat-card"><div class="stat-title">Concluídas vs Abertas</div><div class="stat-value">${data.openVsClosed?.concluidas||0} / ${data.openVsClosed?.abertas||0}</div></div>`);
+        html.push(`<div class="stat-card"><div class="stat-title">Média de resolução (dias)</div><div class="stat-value">${data.avgResolutionDays ? data.avgResolutionDays.toFixed(1) : '—'}</div></div>`);
+        html.push(`<div class="stat-card"><div class="stat-title">Turno</div><div class="list-chips"><span class="pill turno">MT: ${data.byShift?.MT||0}</span><span class="pill turno">SN: ${data.byShift?.SN||0}</span></div></div>`);
         html.push('</div>');
-        html.push('<div style="min-width:240px;"><h4 style="margin:6px 0 8px 0;">Por Tipo</h4>');
-        const types = Object.keys(data.byType).sort((a,b)=>data.byType[b]-data.byType[a]).slice(0,8);
-        types.forEach(t => html.push(`<div class="pill">${t}: ${data.byType[t]}</div>`));
-        html.push('</div></div></div>');
-        html.push('<div style="margin-top:12px;"><h4>Últimas ocorrências</h4>');
-        html.push('<ul>');
-        (data.latest||[]).forEach(l => html.push(`<li style="margin-bottom:8px;"><strong>${l.occurrence_id}</strong> — ${l.type_name} — ${l.assessor_name||''} — ${l.status}</li>`));
+
+        html.push('<div style="margin-top:14px; display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:12px;">');
+        html.push('<div class="stat-card"><div class="stat-title">Totais por dia (últimos 7)</div><div class="list-chips">');
+        (data.totalsByDay||[]).forEach(d => html.push(`<span class="pill meta">${d.day.split('-').reverse().join('/')} — ${d.total}</span>`));
+        html.push('</div></div>');
+
+        html.push('<div class="stat-card"><div class="stat-title">Por status</div><div class="list-chips">');
+        Object.keys(data.byStatus||{}).forEach(k => html.push(`<span class="pill">${k}: ${data.byStatus[k]}</span>`));
+        html.push('</div></div>');
+
+        html.push('<div class="stat-card"><div class="stat-title">Tipos mais frequentes</div><div class="list-chips">');
+        const types = Object.keys(data.byType||{}).sort((a,b)=>data.byType[b]-data.byType[a]).slice(0,6);
+        types.forEach(t => html.push(`<span class="pill">${t}: ${data.byType[t]}</span>`));
+        html.push('</div></div>');
+        html.push('</div>');
+
+        html.push('<div style="margin-top:12px;" class="stat-card"><div class="stat-title">Últimas ocorrências</div><ul>');
+        (data.latest||[]).forEach(l => html.push(`<li style="margin-bottom:8px; color:#0f1f33;"><strong>${l.occurrence_id}</strong> • ${formatTime(l.date_time)} • ${inferTurno(l)} • ${l.type_name} • ${l.status}</li>`));
         html.push('</ul></div>');
+
         $('dashArea').innerHTML = html.join('');
       }).catch(e => { console.error(e); $('dashArea').textContent = 'Erro ao carregar'; });
     }
