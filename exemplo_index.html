@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NAC — Ocorrências</title>
+  <style>
+    :root{
+      --navy:#123456;
+      --blue:#02689C;
+      --blue-soft:#f0fbff;
+      --gray:#efefef;
+      --gray-2:#dbe7f1;
+      --muted:#5d6b7a;
+      --card:#ffffff;
+      --radius:12px;
+      --shadow:0 8px 26px rgba(18,52,86,0.12);
+    }
+    *{ box-sizing:border-box; }
+    body{ font-family: 'Inter', 'Roboto', Arial, sans-serif; margin:0; background:linear-gradient(180deg, var(--blue-soft), #f6f9fc); color:#0f1f33; }
+    header{ background:var(--navy); color:#fff; padding:16px 24px; display:flex; align-items:center; justify-content:space-between; box-shadow:var(--shadow); position:sticky; top:0; z-index:5; }
+    header h1{ font-size:18px; margin:0; letter-spacing:0.2px; display:flex; align-items:center; gap:10px; }
+    header h1::before{ content:'⚕️'; font-size:18px; }
+    header .actions{ display:flex; gap:10px; align-items:center; }
+    button.btn{ background:var(--blue); color:#fff; border:none; padding:9px 14px; border-radius:10px; cursor:pointer; font-weight:600; box-shadow:0 6px 16px rgba(2,104,156,0.25); transition:transform .08s ease, box-shadow .08s ease; }
+    button.btn:hover{ transform:translateY(-1px); box-shadow:0 10px 20px rgba(2,104,156,0.28); }
+    button.ghost{ background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.25); padding:7px 12px; border-radius:10px; }
+    main{ padding:22px; max-width:1200px; margin:0 auto; display:flex; flex-direction:column; gap:16px; }
+    .card{ background:var(--card); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); margin-bottom:0; border:1px solid var(--gray-2); }
+    .filters{ display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:12px; align-items:end; }
+    label{ font-size:13px; color:var(--muted); font-weight:600; }
+    input[type="text"], input[type="date"], select, textarea { padding:9px 10px; border-radius:10px; border:1px solid var(--gray-2); background:#fff; width:100%; }
+    .small{ font-size:12px; color:var(--muted); }
+    .pill{ padding:6px 10px; border-radius:999px; font-size:12px; display:inline-flex; gap:6px; align-items:center; font-weight:600; }
+    .pill.aberta{ background:#e1f1fb; color:var(--blue); }
+    .pill.andamento{ background:#fff1df; color:#f6a63b; }
+    .pill.concluida{ background:#e4f6eb; color:#22c55e; }
+    .pill.cancelada{ background:#eef1f5; color:#9aa6b2; }
+    .pill.turno{ background:#eef6ff; color:var(--navy); }
+    .pill.meta{ background:var(--gray); color:var(--navy); font-weight:700; }
+    .timeline{ display:flex; flex-direction:column; gap:12px; }
+    .day-block{ border-left:4px solid var(--blue); padding-left:12px; }
+    .day-header{ display:flex; align-items:center; justify-content:space-between; background:var(--blue-soft); padding:10px 12px; border-radius:10px; border:1px solid var(--gray-2); font-weight:700; color:var(--navy); }
+    .occ-card{ background:#fff; border-radius:12px; border:1px solid var(--gray-2); padding:12px; box-shadow:0 4px 16px rgba(18,52,86,0.1); display:flex; flex-direction:column; gap:6px; }
+    .occ-top{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .occ-id{ font-weight:800; color:var(--navy); }
+    .occ-meta{ font-size:12px; color:var(--muted); display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .occ-desc{ font-size:13px; color:#1f2b3a; background:var(--blue-soft); padding:8px 10px; border-radius:10px; border:1px solid var(--gray-2); }
+    .occ-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+    .list-empty{ text-align:center; color:var(--muted); padding:24px 0; }
+    /* modal */
+    .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; z-index:9999;}
+    .modal{ width:760px; max-width:95%; background:#fff; border-radius:16px; padding:16px; box-shadow: 0 12px 34px rgba(16,24,40,0.28); border:1px solid var(--gray-2); }
+    .modal header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .form-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;}
+    .attachments-list{ margin-top:8px; font-size:13px; }
+    .section-title{ font-weight:700; color:var(--navy); margin:16px 0 8px 0; font-size:14px; }
+    .center{ text-align:center; }
+    .dashboard-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; }
+    .stat-card{ background:#fff; border:1px solid var(--gray-2); padding:12px; border-radius:12px; box-shadow:0 6px 20px rgba(18,52,86,0.08); }
+    .stat-title{ font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.4px; }
+    .stat-value{ font-size:22px; font-weight:800; color:var(--navy); }
+    .list-chips{ display:flex; gap:8px; flex-wrap:wrap; }
+    @media(max-width:700px){ header{flex-direction:column; align-items:flex-start; gap:10px;} .occ-top{flex-direction:column; align-items:flex-start;} }
+  </style>
+</head>
+  <body>
+  <header>
+    <h1>NAC — Ocorrências (Web App)</h1>
+    <div class="actions">
+      <div id="userEmail" class="small" style="color:#cfe3ff; margin-right:12px;">Carregando...</div>
+      <button class="btn" id="newBtn">Nova Ocorrência</button>
+      <button class="ghost" id="dashBtn">Dashboard</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div>
+          <h3 style="margin:0 0 6px 0; color:var(--navy);">Fluxo de Ocorrências (NAC)</h3>
+          <div class="small">Organizado por dia → turno → ocorrência, como na planilha do plantão.</div>
+        </div>
+        <div class="small" id="summaryTop"></div>
+      </div>
+
+      <div style="margin-top:12px" class="filters">
+        <div>
+          <label>Dia</label><br>
+          <input type="date" id="filterStart">
+        </div>
+        <div>
+          <label>Até</label><br>
+          <input type="date" id="filterEnd">
+        </div>
+        <div>
+          <label>Turno</label><br>
+          <select id="filterTurno"><option value="">(todos)</option><option>MT</option><option>SN</option></select>
+        </div>
+        <div>
+          <label>Tipo</label><br>
+          <select id="filterType"><option value="">(todos)</option></select>
+        </div>
+        <div>
+          <label>Status</label><br>
+          <select id="filterStatus"><option value="">(todos)</option><option>Aberta</option><option>Em andamento</option><option>Concluída</option><option>Cancelada</option></select>
+        </div>
+        <div>
+          <label>Busca rápida</label><br>
+          <input type="text" id="searchInput" placeholder="ID, assessor ou texto...">
+        </div>
+        <div style="align-self:end;">
+          <button class="btn" id="btnSearch">Buscar</button>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;" id="listArea"></div>
+    </div>
+
+    <div class="card">
+      <h4 style="margin:0 0 8px 0; color:var(--navy);">Painel rápido</h4>
+      <div id="dashArea" class="small">Carregando indicadores...</div>
+    </div>
+  </main>
+
+  <!-- Modal (inserido dinamicamente) -->
+  <div id="modalContainer"></div>
+
+  <script>
+    // ---------- HELPERS ----------
+    const $ = (id) => document.getElementById(id);
+
+    // Simulador local para substituir google.script.run
+    const STORAGE_KEY = 'nac_ocorrencias_mock_db_v1';
+    let mockDb = loadMockDb();
+
+    const MOCK_CONFIG = {
+      user: 'exemplo@offline',
+      assessores: [
+        { assessor_id: 'A001', assessor_name: 'Ana Souza' },
+        { assessor_id: 'A002', assessor_name: 'Carlos Lima' }
+      ],
+      tipos: [
+        { type_name: 'Internação' },
+        { type_name: 'Diagnóstico' },
+        { type_name: 'Alta médica' },
+        { type_name: 'Registro geral' }
+      ],
+      origens: [
+        { origin_name: 'E-mail' },
+        { origin_name: 'Telefone' },
+        { origin_name: 'WhatsApp' },
+        { origin_name: 'Plantão' }
+      ]
+    };
+
+    function loadMockDb() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch(err) {
+        console.warn('localStorage indisponível, usando memória somente.', err);
+      }
+      const now = new Date();
+      return [
+        {
+          occurrence_id: 'OC20240501-001',
+          date_time: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 30).toISOString(),
+          assessor_name: 'Ana Souza',
+          type_name: 'Internação',
+          origin: 'E-mail',
+          priority: 'Média',
+          status: 'Aberta',
+          description: 'Paciente com suspeita de meningite aguardando avaliação.',
+          follow_up_date: '',
+          attachments: '',
+          shift: 'MT'
+        },
+        {
+          occurrence_id: 'OC20240502-002',
+          date_time: new Date(now.getFullYear(), now.getMonth(), now.getDate()-1, 19, 10).toISOString(),
+          assessor_name: 'Carlos Lima',
+          type_name: 'Diagnóstico',
+          origin: 'Telefone',
+          priority: 'Alta',
+          status: 'Em andamento',
+          description: 'Discussão de laudo para paciente em emergência.',
+          follow_up_date: '',
+          attachments: '',
+          shift: 'SN'
+        },
+        {
+          occurrence_id: 'OC20240502-003',
+          date_time: new Date(now.getFullYear(), now.getMonth(), now.getDate()-1, 15, 45).toISOString(),
+          assessor_name: 'Ana Souza',
+          type_name: 'Registro geral',
+          origin: 'Plantão',
+          priority: 'Baixa',
+          status: 'Concluída',
+          description: 'Contato com familiar para atualizar estado clínico.',
+          follow_up_date: '',
+          attachments: '',
+          shift: 'MT'
+        }
+      ];
+    }
+
+    function persistMockDb() {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(mockDb)); } catch(err) { console.warn('Persistência indisponível', err); }
+    }
+
+    // API de simulação com as mesmas assinaturas do Apps Script
+    const mockApi = {
+      getConfigData: () => Promise.resolve(MOCK_CONFIG),
+      listOccurrences: (params) => {
+        const page = Math.max(1, parseInt(params?.page || 1));
+        const pageSize = Math.max(10, parseInt(params?.pageSize || 50));
+        let rows = [...mockDb];
+        const parseDate = (v) => v ? new Date(v) : null;
+
+        if (params?.search) {
+          const q = String(params.search).toLowerCase();
+          rows = rows.filter(r => (
+            (r.occurrence_id && String(r.occurrence_id).toLowerCase().includes(q)) ||
+            (r.assessor_name && String(r.assessor_name).toLowerCase().includes(q)) ||
+            (r.description && String(r.description).toLowerCase().includes(q))
+          ));
+        }
+        if (params?.type_name) rows = rows.filter(r => String(r.type_name) === String(params.type_name));
+        if (params?.status) rows = rows.filter(r => String(r.status) === String(params.status));
+        if (params?.turno) rows = rows.filter(r => detectShiftLocal(r) === String(params.turno).toUpperCase());
+        if (params?.startDate) {
+          const sd = new Date(params.startDate + 'T00:00:00');
+          rows = rows.filter(r => { const dt = parseDate(r.date_time); return dt && dt >= sd; });
+        }
+        if (params?.endDate) {
+          const ed = new Date(params.endDate + 'T23:59:59');
+          rows = rows.filter(r => { const dt = parseDate(r.date_time); return dt && dt <= ed; });
+        }
+
+        rows.sort((a,b) => new Date(b.date_time || 0) - new Date(a.date_time || 0));
+        const total = rows.length;
+        const startIndex = (page - 1) * pageSize;
+        const pageRows = rows.slice(startIndex, startIndex + pageSize);
+        return Promise.resolve({ total, page, pageSize, rows: pageRows });
+      },
+      getOccurrenceById: (id) => Promise.resolve(mockDb.find(r => String(r.occurrence_id) === String(id)) || null),
+      createOccurrence: (form) => {
+        const dt = form.date && form.time ? new Date(form.date + 'T' + form.time) : (form.date ? new Date(form.date + 'T09:00:00') : new Date());
+        const occurrence_id = generateOccurrenceIdLocal(dt);
+        const row = {
+          ...form,
+          occurrence_id,
+          date_time: dt.toISOString(),
+          shift: form.shift || form.turno || form.turn || inferTurno({ date_time: dt }) || 'MT'
+        };
+        mockDb.push(row);
+        persistMockDb();
+        return Promise.resolve({ success:true, id: occurrence_id });
+      },
+      updateOccurrence: ({id, data}) => {
+        const idx = mockDb.findIndex(r => String(r.occurrence_id) === String(id));
+        if (idx < 0) return Promise.resolve({ success:false, message:'Registro não encontrado' });
+        mockDb[idx] = { ...mockDb[idx], ...data };
+        persistMockDb();
+        return Promise.resolve({ success:true });
+      },
+      deleteOccurrence: (id) => mockApi.updateOccurrence({ id, data:{ status:'Cancelada' } }),
+      saveBase64File: (name, mime, base64) => Promise.resolve(`data:${mime};base64,${base64}`),
+      getDashboardData: () => Promise.resolve(buildDashboardLocal())
+    };
+
+    function detectShiftLocal(row) {
+      if (!row) return '';
+      const explicit = row.shift || row.turno || row.turn || row.periodo;
+      if (explicit) return String(explicit).toUpperCase();
+      if (row.date_time) {
+        const dt = new Date(row.date_time);
+        if (dt && !isNaN(dt)) return dt.getHours() < 18 ? 'MT' : 'SN';
+      }
+      return '';
+    }
+
+    function generateOccurrenceIdLocal(dateObj) {
+      const pad = (n) => String(n).padStart(2,'0');
+      const ymd = `${dateObj.getFullYear()}${pad(dateObj.getMonth()+1)}${pad(dateObj.getDate())}`;
+      const sameDay = mockDb.filter(r => String(r.occurrence_id).includes('OC' + ymd));
+      const seq = (sameDay.length + 1).toString().padStart(3,'0');
+      return `OC${ymd}-${seq}`;
+    }
+
+    function buildDashboardLocal() {
+      const all = [...mockDb];
+      const byStatus = {};
+      const byType = {};
+      const byDay = {};
+      const byShift = { MT:0, SN:0 };
+      const openVsClosed = { abertas:0, concluidas:0 };
+      let sumDays = 0, closedCount = 0;
+
+      all.forEach(r => {
+        const st = r.status || 'Aberta';
+        byStatus[st] = (byStatus[st] || 0) + 1;
+        const t = r.type_name || 'Outros';
+        byType[t] = (byType[t] || 0) + 1;
+        const dayKey = (r.date_time || '').toString().slice(0,10);
+        if (dayKey) byDay[dayKey] = (byDay[dayKey] || 0) + 1;
+        const turno = detectShiftLocal(r);
+        if (turno && byShift[turno] !== undefined) byShift[turno] += 1;
+        if (String(st).toLowerCase().includes('conclu')) openVsClosed.concluidas += 1; else openVsClosed.abertas += 1;
+        if (String(st).toLowerCase().includes('conclu') && r.created_at && r.updated_at) {
+          const d1 = new Date(r.created_at);
+          const d2 = new Date(r.updated_at);
+          if (d1 && d2 && !isNaN(d1) && !isNaN(d2)) {
+            const diffDays = (d2 - d1) / (1000*60*60*24);
+            sumDays += diffDays; closedCount++;
+          }
+        }
+      });
+
+      const sorted = all.slice().sort((a,b)=> new Date(b.date_time||0) - new Date(a.date_time||0));
+      const totalsByDay = Object.keys(byDay).sort((a,b)=> new Date(b) - new Date(a)).slice(0,7).map(day => ({ day, total: byDay[day] }));
+      return {
+        total: all.length,
+        byStatus,
+        byType,
+        avgResolutionDays: closedCount ? (sumDays / closedCount) : null,
+        latest: sorted.slice(0,10),
+        totalsByDay,
+        byShift,
+        openVsClosed
+      };
+    }
+
+    // Wrappers para manter assinatura do código original
+    function promiseCall(fn, arg) { return mockApi[fn](arg); }
+    function saveFilePromise(name, mime, base64) { return mockApi.saveBase64File(name, mime, base64); }
+
+    // ---------- STATE ----------
+    let CONFIG = null;
+    let CURRENT_PAGE = 1;
+    const PAGE_SIZE = 200; // timeline visual - carregamos bloco maior para agrupar por dia
+
+    // ---------- INIT ----------
+    function init() {
+      promiseCall('getConfigData', null).then(res => {
+        CONFIG = res;
+        $('userEmail').textContent = res.user || '';
+        populateFilters(res);
+        loadList();
+        loadDashboard();
+      }).catch(e => { console.error(e); alert('Erro ao carregar configuração'); });
+      // events
+      $('btnSearch').addEventListener('click', () => { CURRENT_PAGE = 1; loadList(); });
+      $('newBtn').addEventListener('click', openCreateModal);
+      $('dashBtn').addEventListener('click', loadDashboard);
+    }
+
+    function populateFilters(res) {
+      const tSel = $('filterType'); tSel.innerHTML = '<option value="">(todos)</option>';
+      (res.tipos||[]).forEach(t => {
+        const name = t.type_name || t.name;
+        const opt = document.createElement('option'); opt.value = name; opt.textContent = name;
+        tSel.appendChild(opt);
+      });
+    }
+
+    // ---------- LIST & RENDER ----------
+    function loadList() {
+      const params = {
+        page: CURRENT_PAGE, pageSize: PAGE_SIZE,
+        search: $('searchInput').value || '',
+        type_name: $('filterType').value || '',
+        status: $('filterStatus').value || '',
+        startDate: $('filterStart').value || '',
+        endDate: $('filterEnd').value || '',
+        turno: $('filterTurno').value || ''
+      };
+      promiseCall('listOccurrences', params).then(res => {
+        renderList(res.rows || [], res.total || 0);
+      }).catch(e => { console.error(e); alert('Erro ao listar'); });
+    }
+
+    function renderList(rows, total) {
+      const area = $('listArea'); area.innerHTML = '';
+      if (!rows.length) { area.innerHTML = '<div class="list-empty">Sem registros para o filtro escolhido.</div>'; $('summaryTop').textContent = ''; return; }
+
+      const groups = groupByDay(rows);
+      const frag = document.createDocumentFragment();
+      let count = 0;
+      Object.keys(groups).sort((a,b)=> new Date(b) - new Date(a)).forEach(dayKey => {
+        const block = document.createElement('div'); block.className='day-block';
+        const header = document.createElement('div'); header.className='day-header';
+        header.innerHTML = `<span>📅 ${formatDateDisplay(dayKey)}</span><span class="pill meta">${groups[dayKey].length} ocorrências</span>`;
+        block.appendChild(header);
+
+        const list = document.createElement('div'); list.className='timeline';
+        groups[dayKey].sort((a,b)=> new Date(b.date_time||0) - new Date(a.date_time||0)).forEach(r => {
+          count++;
+          const turno = inferTurno(r);
+          const card = document.createElement('div'); card.className='occ-card';
+          const statusPill = buildStatusPill(r.status);
+          const turnoPill = `<span class="pill turno">${turno||'—'}</span>`;
+          card.innerHTML = `
+            <div class="occ-top">
+              <div class="occ-id">[${r.occurrence_id||''}]</div>
+              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">${turnoPill}${statusPill}</div>
+            </div>
+            <div class="occ-meta">
+              <span>${formatTime(r.date_time)}</span>
+              <span>•</span>
+              <span>${r.type_name||'Tipo não informado'}</span>
+              <span>•</span>
+              <span>Assessor: ${r.assessor_name||'—'}</span>
+            </div>
+            <div class="occ-desc">${(r.description||'').split('\n')[0] || 'Sem descrição'}</div>
+            <div class="occ-actions"></div>
+          `;
+          const actions = card.querySelector('.occ-actions');
+          const open = document.createElement('button'); open.className='btn'; open.textContent='Abrir'; open.style.padding='6px 10px'; open.addEventListener('click', ()=> openViewModal(r.occurrence_id));
+          const edit = document.createElement('button'); edit.className='btn'; edit.style.background='#22c55e'; edit.textContent='Editar'; edit.style.padding='6px 10px'; edit.addEventListener('click', ()=> openEditModal(r.occurrence_id));
+          const cancel = document.createElement('button'); cancel.className='btn'; cancel.style.background='#9aa6b2'; cancel.textContent='Cancelar'; cancel.style.padding='6px 10px'; cancel.addEventListener('click', ()=> { if(confirm('Confirmar cancelar esta ocorrência?')) deleteRec(r.occurrence_id); });
+          actions.appendChild(open); actions.appendChild(edit); actions.appendChild(cancel);
+          list.appendChild(card);
+        });
+        block.appendChild(list);
+        frag.appendChild(block);
+      });
+      area.appendChild(frag);
+      $('summaryTop').textContent = `${count} ocorrências exibidas`;    
+    }
+
+    function buildStatusPill(status) {
+      const s = (status||'Aberta').toLowerCase();
+      let cls = 'aberta', label='Aberta';
+      if (s.indexOf('andamento')>=0) { cls='andamento'; label='Em andamento'; }
+      else if (s.indexOf('conclu')>=0) { cls='concluida'; label='Concluída'; }
+      else if (s.indexOf('cancel')>=0) { cls='cancelada'; label='Cancelada'; }
+      return `<span class="pill ${cls}">${label}</span>`;
+    }
+
+    function groupByDay(rows) {
+      const out = {};
+      rows.forEach(r => {
+        const day = r.date_time instanceof Date ? r.date_time.toISOString().slice(0,10) : (String(r.date_time||'').slice(0,10) || 'sem-data');
+        if (!out[day]) out[day] = [];
+        out[day].push(r);
+      });
+      return out;
+    }
+
+    function formatDateDisplay(isoDate) {
+      if (!isoDate) return '—';
+      const [y,m,d] = isoDate.split('-');
+      return `${d}/${m}/${y}`;
+    }
+
+    function formatTime(dateTime) {
+      if (!dateTime) return '—';
+      const dt = new Date(dateTime);
+      if (isNaN(dt)) return dateTime;
+      return dt.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+    }
+
+    function inferTurno(row) {
+      if (!row) return '';
+      const explicit = row.shift || row.turno || row.turn || row.periodo;
+      if (explicit) return String(explicit).toUpperCase();
+      const dt = new Date(row.date_time);
+      if (!dt || isNaN(dt)) return '';
+      const h = dt.getHours();
+      return h < 18 ? 'MT' : 'SN';
+    }
+
+    // ---------- CRUD MODALS ----------
+    function openCreateModal() {
+      openModal({mode:'create'});
+    }
+    function openViewModal(id) {
+      promiseCall('getOccurrenceById', id).then(r => openModal({mode:'view', data:r})).catch(e=>console.error(e));
+    }
+    function openEditModal(id) {
+      promiseCall('getOccurrenceById', id).then(r => openModal({mode:'edit', data:r})).catch(e=>console.error(e));
+    }
+
+    function openModal(opts) {
+      const container = $('modalContainer');
+      container.innerHTML = '';
+      const backdrop = document.createElement('div'); backdrop.className='modal-backdrop';
+      const modal = document.createElement('div'); modal.className='modal';
+      // header
+      const header = document.createElement('header');
+      const title = document.createElement('h3'); title.style.margin='0'; title.textContent = opts.mode === 'create' ? 'Nova Ocorrência' : (opts.mode==='view'?'Visualizar':'Editar') + ' Ocorrência';
+      const closeBtn = document.createElement('button'); closeBtn.className='ghost'; closeBtn.textContent='Fechar'; closeBtn.addEventListener('click', ()=> container.innerHTML='');
+      header.appendChild(title); header.appendChild(closeBtn);
+      modal.appendChild(header);
+
+      // body
+      const body = document.createElement('div'); body.style.marginTop='8px';
+      const html = document.createElement('div');
+      html.innerHTML = `
+        <div class="section-title">Dados principais</div>
+        <div class="form-grid">
+          <div>
+            <label>Data</label><br>
+            <input type="date" id="m_date">
+          </div>
+          <div>
+            <label>Turno (MT / SN)</label><br>
+            <select id="m_shift"><option>MT</option><option>SN</option></select>
+          </div>
+          <div>
+            <label>Hora</label><br>
+            <input type="time" id="m_time" value="09:00">
+          </div>
+          <div>
+            <label>Tipo</label><br>
+            <select id="m_type_name"></select>
+          </div>
+          <div>
+            <label>Quem notifica (assessor)</label><br>
+            <input type="text" id="m_assessor_name">
+          </div>
+          <div>
+            <label>Status</label><br>
+            <select id="m_status"><option>Aberta</option><option>Em andamento</option><option>Concluída</option><option>Cancelada</option></select>
+          </div>
+        </div>
+        <div class="section-title">Descrição</div>
+        <textarea id="m_description" style="width:100%; min-height:110px;"></textarea>
+        <div class="section-title">Complementos</div>
+        <div class="form-grid">
+          <div>
+            <label>Follow-up</label><br>
+            <input type="date" id="m_follow">
+          </div>
+          <div>
+            <label>Origem</label><br>
+            <select id="m_origin"></select>
+          </div>
+          <div>
+            <label>Prioridade</label><br>
+            <select id="m_priority"><option>Baixa</option><option selected>Média</option><option>Alta</option><option>Crítica</option></select>
+          </div>
+        </div>
+        <div class="section-title">Anexos</div>
+        <input type="file" id="m_files" multiple>
+        <div class="attachments-list" id="m_attachments"></div>
+        <div style="margin-top:14px; text-align:right; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+          <button class="ghost" id="m_cancelBtn">Fechar</button>
+          <button class="btn" id="m_saveBtn">Salvar</button>
+        </div>
+      `;
+      body.appendChild(html);
+      modal.appendChild(body);
+      backdrop.appendChild(modal);
+      container.appendChild(backdrop);
+
+      // preencher selects com CONFIG
+      const selType = $('m_type_name'); selType.innerHTML = '<option value=""></option>';
+      (CONFIG.tipos||[]).forEach(t => { const opt=document.createElement('option'); opt.value = t.type_name; opt.textContent=t.type_name; selType.appendChild(opt); });
+      const selOrig = $('m_origin'); selOrig.innerHTML = '<option value=""></option>';
+      (CONFIG.origens || []).forEach(o => { const opt=document.createElement('option'); opt.value = o.origin_name || o.origin; opt.textContent = o.origin_name || o.origin; selOrig.appendChild(opt); });
+
+      // modo view: somente leitura
+      if (opts.mode === 'view') {
+        const d = opts.data || {};
+        $('m_date').value = (d.date_time||'').slice(0,10);
+        $('m_time').value = (d.date_time||'').slice(11,16);
+        $('m_shift').value = inferTurno(d) || 'MT';
+        $('m_assessor_name').value = d.assessor_name || '';
+        $('m_type_name').value = d.type_name || '';
+        $('m_origin').value = d.origin || '';
+        $('m_priority').value = d.priority || 'Média';
+        $('m_status').value = d.status || 'Aberta';
+        $('m_follow').value = d.follow_up_date || '';
+        $('m_description').value = d.description || '';
+        $('m_shift').disabled = true;
+        ['m_date','m_time','m_assessor_name','m_type_name','m_origin','m_priority','m_status','m_follow','m_description'].forEach(id=> $(id).setAttribute('disabled','disabled'));
+        $('m_files').style.display = 'none';
+        $('m_saveBtn').style.display = 'none';
+        // attachments links
+        const attDiv = $('m_attachments');
+        attDiv.innerHTML = '';
+        (String(d.attachments||'').split(';').filter(Boolean)).forEach(u => {
+          const a = document.createElement('a'); a.href = u; a.target='_blank'; a.textContent = u; a.style.display='block';
+          attDiv.appendChild(a);
+        });
+      } else {
+        // create or edit
+        if (opts.data) {
+          const d = opts.data;
+          $('m_date').value = (d.date_time||'').slice(0,10);
+          $('m_time').value = (d.date_time||'').slice(11,16) || '09:00';
+          $('m_shift').value = inferTurno(d) || 'MT';
+          $('m_assessor_name').value = d.assessor_name || '';
+          $('m_type_name').value = d.type_name || '';
+          $('m_origin').value = d.origin || '';
+          $('m_priority').value = d.priority || 'Média';
+          $('m_status').value = d.status || 'Aberta';
+          $('m_follow').value = d.follow_up_date || '';
+          $('m_description').value = d.description || '';
+          const attDiv = $('m_attachments'); attDiv.innerHTML = '';
+          (String(d.attachments||'').split(';').filter(Boolean)).forEach(u => {
+            const a = document.createElement('a'); a.href=u; a.target='_blank'; a.textContent=u; a.style.display='block'; attDiv.appendChild(a);
+          });
+        }
+        // evento salvar
+        $('m_saveBtn').addEventListener('click', async ()=> {
+          $('m_saveBtn').textContent = 'Salvando...'; $('m_saveBtn').disabled=true;
+          // processar anexos (ler files e enviar para server)
+          const files = $('m_files').files;
+          const attachmentsUrls = (opts.data && opts.data.attachments) ? String(opts.data.attachments).split(';').filter(Boolean) : [];
+          for (let i=0; i<files.length; i++) {
+            const f = files[i];
+            const base64 = await fileToBase64(f);
+            // base64 format: data:<mime>;base64,<data>
+            const parts = base64.split(',');
+            const meta = parts[0]; const raw = parts[1];
+            // enviar para server
+            try {
+              const url = await saveFilePromise(f.name, f.type || 'application/octet-stream', raw);
+              attachmentsUrls.push(url);
+            } catch(err) {
+              console.error('Erro upload', err);
+              alert('Falha no upload do arquivo: ' + f.name);
+            }
+          }
+          // montar objeto
+          const obj = {
+            date: $('m_date').value,
+            time: $('m_time').value,
+            shift: $('m_shift').value,
+            assessor_name: $('m_assessor_name').value,
+            type_name: $('m_type_name').value,
+            origin: $('m_origin').value,
+            priority: $('m_priority').value,
+            status: $('m_status').value,
+            description: $('m_description').value,
+            follow_up_date: $('m_follow').value,
+            attachments: attachmentsUrls.join(';')
+          };
+          if (opts.mode === 'create') {
+            promiseCall('createOccurrence', obj).then(res => {
+              alert('Criado: ' + res.id); container.innerHTML=''; loadList(); loadDashboard();
+            }).catch(e => { console.error(e); alert('Erro ao criar'); }).finally(()=>{ $('m_saveBtn').textContent='Salvar'; $('m_saveBtn').disabled=false; });
+          } else {
+            // update existing
+            const id = opts.data.occurrence_id;
+            promiseCall('updateOccurrence', {id:id, data:obj}).then(res => {
+              alert('Atualizado'); container.innerHTML=''; loadList(); loadDashboard();
+            }).catch(e => { console.error(e); alert('Erro ao atualizar'); }).finally(()=>{ $('m_saveBtn').textContent='Salvar'; $('m_saveBtn').disabled=false; });
+          }
+        });
+      }
+
+      $('m_cancelBtn').addEventListener('click', ()=> container.innerHTML='');
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = function(e) { resolve(e.target.result); };
+        fr.onerror = reject;
+        fr.readAsDataURL(file);
+      });
+    }
+
+    function deleteRec(id) {
+      promiseCall('deleteOccurrence', id).then(res => { alert('Marcado como Cancelada'); loadList(); loadDashboard(); }).catch(e => { console.error(e); alert('Erro ao cancelar'); });
+    }
+
+    // ---------- DASHBOARD ----------
+    function loadDashboard() {
+      $('dashArea').textContent = 'Carregando...';
+      promiseCall('getDashboardData', null).then(data => {
+        const html = [];
+        html.push('<div class="dashboard-grid">');
+        html.push(`<div class="stat-card"><div class="stat-title">Total</div><div class="stat-value">${data.total||0}</div></div>`);
+        html.push(`<div class="stat-card"><div class="stat-title">Concluídas vs Abertas</div><div class="stat-value">${data.openVsClosed?.concluidas||0} / ${data.openVsClosed?.abertas||0}</div></div>`);
+        html.push(`<div class="stat-card"><div class="stat-title">Média de resolução (dias)</div><div class="stat-value">${data.avgResolutionDays ? data.avgResolutionDays.toFixed(1) : '—'}</div></div>`);
+        html.push(`<div class="stat-card"><div class="stat-title">Turno</div><div class="list-chips"><span class="pill turno">MT: ${data.byShift?.MT||0}</span><span class="pill turno">SN: ${data.byShift?.SN||0}</span></div></div>`);
+        html.push('</div>');
+
+        html.push('<div style="margin-top:14px; display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:12px;">');
+        html.push('<div class="stat-card"><div class="stat-title">Totais por dia (últimos 7)</div><div class="list-chips">');
+        (data.totalsByDay||[]).forEach(d => html.push(`<span class="pill meta">${d.day.split('-').reverse().join('/')} — ${d.total}</span>`));
+        html.push('</div></div>');
+
+        html.push('<div class="stat-card"><div class="stat-title">Por status</div><div class="list-chips">');
+        Object.keys(data.byStatus||{}).forEach(k => html.push(`<span class="pill">${k}: ${data.byStatus[k]}</span>`));
+        html.push('</div></div>');
+
+        html.push('<div class="stat-card"><div class="stat-title">Tipos mais frequentes</div><div class="list-chips">');
+        const types = Object.keys(data.byType||{}).sort((a,b)=>data.byType[b]-data.byType[a]).slice(0,6);
+        types.forEach(t => html.push(`<span class="pill">${t}: ${data.byType[t]}</span>`));
+        html.push('</div></div>');
+        html.push('</div>');
+
+        html.push('<div style="margin-top:12px;" class="stat-card"><div class="stat-title">Últimas ocorrências</div><ul>');
+        (data.latest||[]).forEach(l => html.push(`<li style="margin-bottom:8px; color:#0f1f33;"><strong>${l.occurrence_id}</strong> • ${formatTime(l.date_time)} • ${inferTurno(l)} • ${l.type_name} • ${l.status}</li>`));
+        html.push('</ul></div>');
+
+        $('dashArea').innerHTML = html.join('');
+      }).catch(e => { console.error(e); $('dashArea').textContent = 'Erro ao carregar'; });
+    }
+
+    // ---------- START ----------
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>
