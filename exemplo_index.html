@@ -26,6 +26,7 @@
     button.btn:hover{ transform:translateY(-1px); box-shadow:0 10px 20px rgba(2,104,156,0.28); }
     button.ghost{ background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.25); padding:7px 12px; border-radius:10px; }
     main{ padding:22px; max-width:1200px; margin:0 auto; display:flex; flex-direction:column; gap:16px; }
+    .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
     .card{ background:var(--card); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); margin-bottom:0; border:1px solid var(--gray-2); }
     .filters{ display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:12px; align-items:end; }
     label{ font-size:13px; color:var(--muted); font-weight:600; }
@@ -48,6 +49,8 @@
     .occ-desc{ font-size:13px; color:#1f2b3a; background:var(--blue-soft); padding:8px 10px; border-radius:10px; border:1px solid var(--gray-2); }
     .occ-actions{ display:flex; gap:8px; flex-wrap:wrap; }
     .list-empty{ text-align:center; color:var(--muted); padding:24px 0; }
+    .skeleton{ animation: pulse 1.4s ease-in-out infinite; background:linear-gradient(90deg, #f5f8fb 25%, #eaeff5 50%, #f5f8fb 75%); background-size:200% 100%; }
+    @keyframes pulse { 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
     /* modal */
     .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; z-index:9999;}
     .modal{ width:760px; max-width:95%; background:#fff; border-radius:16px; padding:16px; box-shadow: 0 12px 34px rgba(16,24,40,0.28); border:1px solid var(--gray-2); }
@@ -107,7 +110,7 @@
         </div>
         <div>
           <label>Busca rápida</label><br>
-          <input type="text" id="searchInput" placeholder="ID, assessor ou texto...">
+          <input type="text" id="searchInput" placeholder="ID, assessor ou texto..." aria-label="Buscar por ID, assessor ou texto">
         </div>
         <div style="align-self:end;">
           <button class="btn" id="btnSearch">Buscar</button>
@@ -129,6 +132,7 @@
   <script>
     // ---------- HELPERS ----------
     const $ = (id) => document.getElementById(id);
+    const STATUS_OPTIONS = ['Aberta','Em andamento','Concluída','Cancelada'];
 
     // Simulador local para substituir google.script.run
     const STORAGE_KEY = 'nac_ocorrencias_mock_db_v1';
@@ -336,13 +340,22 @@
     function promiseCall(fn, arg) { return mockApi[fn](arg); }
     function saveFilePromise(name, mime, base64) { return mockApi.saveBase64File(name, mime, base64); }
 
+    function setLoading(area, isLoading) {
+      if (area === 'list') state.listLoading = isLoading;
+      if (area === 'dash') state.dashLoading = isLoading;
+    }
+
     // ---------- STATE ----------
     let CONFIG = null;
     let CURRENT_PAGE = 1;
     const PAGE_SIZE = 200; // timeline visual - carregamos bloco maior para agrupar por dia
+    const state = { listLoading:false, dashLoading:false };
 
     // ---------- INIT ----------
     function init() {
+      setLoading('list', true); setLoading('dash', true);
+      renderListSkeleton();
+      renderDashSkeleton();
       promiseCall('getConfigData', null).then(res => {
         CONFIG = res;
         $('userEmail').textContent = res.user || '';
@@ -352,6 +365,7 @@
       }).catch(e => { console.error(e); alert('Erro ao carregar configuração'); });
       // events
       $('btnSearch').addEventListener('click', () => { CURRENT_PAGE = 1; loadList(); });
+      $('searchInput').addEventListener('input', debounce(() => { CURRENT_PAGE = 1; loadList(); }, 350));
       $('newBtn').addEventListener('click', openCreateModal);
       $('dashBtn').addEventListener('click', loadDashboard);
     }
@@ -367,6 +381,8 @@
 
     // ---------- LIST & RENDER ----------
     function loadList() {
+      setLoading('list', true);
+      renderListSkeleton();
       const params = {
         page: CURRENT_PAGE, pageSize: PAGE_SIZE,
         search: $('searchInput').value || '',
@@ -378,7 +394,7 @@
       };
       promiseCall('listOccurrences', params).then(res => {
         renderList(res.rows || [], res.total || 0);
-      }).catch(e => { console.error(e); alert('Erro ao listar'); });
+      }).catch(e => { console.error(e); alert('Erro ao listar'); }).finally(()=> setLoading('list', false));
     }
 
     function renderList(rows, total) {
@@ -499,56 +515,57 @@
       const body = document.createElement('div'); body.style.marginTop='8px';
       const html = document.createElement('div');
       html.innerHTML = `
-        <div class="section-title">Dados principais</div>
-        <div class="form-grid">
-          <div>
-            <label>Data</label><br>
-            <input type="date" id="m_date">
+          <div class="section-title">Dados principais</div>
+          <div class="form-grid" aria-label="Dados principais">
+            <div>
+              <label for="m_date">Data</label><br>
+              <input type="date" id="m_date" aria-required="true">
+            </div>
+            <div>
+              <label for="m_shift">Turno (MT / SN)</label><br>
+              <select id="m_shift"><option>MT</option><option>SN</option></select>
+            </div>
+            <div>
+              <label for="m_time">Hora</label><br>
+              <input type="time" id="m_time" value="09:00" aria-required="true">
+            </div>
+            <div>
+              <label for="m_type_name">Tipo</label><br>
+              <select id="m_type_name" aria-required="true"></select>
+            </div>
+            <div>
+              <label for="m_assessor_name">Quem notifica (assessor)</label><br>
+              <input type="text" id="m_assessor_name" aria-required="true" minlength="3">
+            </div>
+            <div>
+              <label for="m_status">Status</label><br>
+              <select id="m_status">${STATUS_OPTIONS.map(s=>`<option>${s}</option>`).join('')}</select>
+            </div>
           </div>
-          <div>
-            <label>Turno (MT / SN)</label><br>
-            <select id="m_shift"><option>MT</option><option>SN</option></select>
+          <div class="section-title">Descrição</div>
+          <textarea id="m_description" style="width:100%; min-height:110px;" aria-required="true" minlength="8"></textarea>
+          <div class="section-title">Complementos</div>
+          <div class="form-grid">
+            <div>
+              <label for="m_follow">Follow-up</label><br>
+              <input type="date" id="m_follow">
+            </div>
+            <div>
+              <label for="m_origin">Origem</label><br>
+              <select id="m_origin"></select>
+            </div>
+            <div>
+              <label for="m_priority">Prioridade</label><br>
+              <select id="m_priority"><option>Baixa</option><option selected>Média</option><option>Alta</option><option>Crítica</option></select>
+            </div>
           </div>
-          <div>
-            <label>Hora</label><br>
-            <input type="time" id="m_time" value="09:00">
-          </div>
-          <div>
-            <label>Tipo</label><br>
-            <select id="m_type_name"></select>
-          </div>
-          <div>
-            <label>Quem notifica (assessor)</label><br>
-            <input type="text" id="m_assessor_name">
-          </div>
-          <div>
-            <label>Status</label><br>
-            <select id="m_status"><option>Aberta</option><option>Em andamento</option><option>Concluída</option><option>Cancelada</option></select>
-          </div>
-        </div>
-        <div class="section-title">Descrição</div>
-        <textarea id="m_description" style="width:100%; min-height:110px;"></textarea>
-        <div class="section-title">Complementos</div>
-        <div class="form-grid">
-          <div>
-            <label>Follow-up</label><br>
-            <input type="date" id="m_follow">
-          </div>
-          <div>
-            <label>Origem</label><br>
-            <select id="m_origin"></select>
-          </div>
-          <div>
-            <label>Prioridade</label><br>
-            <select id="m_priority"><option>Baixa</option><option selected>Média</option><option>Alta</option><option>Crítica</option></select>
-          </div>
-        </div>
-        <div class="section-title">Anexos</div>
-        <input type="file" id="m_files" multiple>
-        <div class="attachments-list" id="m_attachments"></div>
-        <div style="margin-top:14px; text-align:right; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
-          <button class="ghost" id="m_cancelBtn">Fechar</button>
-          <button class="btn" id="m_saveBtn">Salvar</button>
+          <div class="section-title">Anexos</div>
+          <input type="file" id="m_files" multiple aria-label="Anexar arquivos">
+          <div class="attachments-list" id="m_attachments"></div>
+          <div id="m_errors" class="small" style="color:#b91c1c; margin-top:4px;"></div>
+          <div style="margin-top:14px; text-align:right; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
+            <button class="ghost" id="m_cancelBtn">Fechar</button>
+            <button class="btn" id="m_saveBtn">Salvar</button>
         </div>
       `;
       body.appendChild(html);
@@ -606,11 +623,19 @@
           });
         }
         // evento salvar
-        $('m_saveBtn').addEventListener('click', async ()=> {
-          $('m_saveBtn').textContent = 'Salvando...'; $('m_saveBtn').disabled=true;
-          // processar anexos (ler files e enviar para server)
-          const files = $('m_files').files;
-          const attachmentsUrls = (opts.data && opts.data.attachments) ? String(opts.data.attachments).split(';').filter(Boolean) : [];
+          $('m_saveBtn').addEventListener('click', async ()=> {
+            const validation = validateModal();
+            const errorBox = $('m_errors');
+            if (!validation.valid) {
+              errorBox.textContent = validation.message;
+              const firstId = validation.firstFieldId; if (firstId) $(firstId).focus();
+              return;
+            }
+            errorBox.textContent = '';
+            $('m_saveBtn').textContent = 'Salvando...'; $('m_saveBtn').disabled=true;
+            // processar anexos (ler files e enviar para server)
+            const files = $('m_files').files;
+            const attachmentsUrls = (opts.data && opts.data.attachments) ? String(opts.data.attachments).split(';').filter(Boolean) : [];
           for (let i=0; i<files.length; i++) {
             const f = files[i];
             const base64 = await fileToBase64(f);
@@ -640,9 +665,9 @@
             follow_up_date: $('m_follow').value,
             attachments: attachmentsUrls.join(';')
           };
-          if (opts.mode === 'create') {
-            promiseCall('createOccurrence', obj).then(res => {
-              alert('Criado: ' + res.id); container.innerHTML=''; loadList(); loadDashboard();
+            if (opts.mode === 'create') {
+              promiseCall('createOccurrence', obj).then(res => {
+                alert('Criado: ' + res.id); container.innerHTML=''; loadList(); loadDashboard();
             }).catch(e => { console.error(e); alert('Erro ao criar'); }).finally(()=>{ $('m_saveBtn').textContent='Salvar'; $('m_saveBtn').disabled=false; });
           } else {
             // update existing
@@ -670,9 +695,56 @@
       promiseCall('deleteOccurrence', id).then(res => { alert('Marcado como Cancelada'); loadList(); loadDashboard(); }).catch(e => { console.error(e); alert('Erro ao cancelar'); });
     }
 
+    // ---------- VALIDATION ----------
+    function validateModal() {
+      const requiredMessage = 'Preencha os campos obrigatórios.';
+      const status = $('m_status').value;
+      if (!$('m_date').value) return {valid:false, message:requiredMessage + ' Informe a data.', firstFieldId:'m_date'};
+      if (!$('m_time').value) return {valid:false, message:requiredMessage + ' Informe a hora.', firstFieldId:'m_time'};
+      if (!STATUS_OPTIONS.includes(status)) return {valid:false, message:'Status inválido.', firstFieldId:'m_status'};
+      if (!($('m_type_name').value || '').trim()) return {valid:false, message:requiredMessage + ' Selecione o tipo.', firstFieldId:'m_type_name'};
+      if (!($('m_assessor_name').value || '').trim()) return {valid:false, message:requiredMessage + ' Informe o assessor.', firstFieldId:'m_assessor_name'};
+      if (($('m_description').value || '').trim().length < 8) return {valid:false, message:'Descrição deve ter pelo menos 8 caracteres.', firstFieldId:'m_description'};
+      return {valid:true};
+    }
+
+    // ---------- UX HELPERS ----------
+    function debounce(fn, delay) {
+      let t;
+      return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(()=> fn(...args), delay);
+      };
+    }
+
+    function renderListSkeleton() {
+      if (!state.listLoading) return;
+      const area = $('listArea');
+      area.innerHTML = '';
+      for (let i=0;i<3;i++) {
+        const block = document.createElement('div'); block.className='day-block';
+        const header = document.createElement('div'); header.className='day-header skeleton'; header.style.height='24px';
+        block.appendChild(header);
+        const list = document.createElement('div'); list.className='timeline';
+        for (let j=0;j<2;j++) {
+          const card = document.createElement('div'); card.className='occ-card skeleton'; card.style.height='90px';
+          list.appendChild(card);
+        }
+        block.appendChild(list);
+        area.appendChild(block);
+      }
+    }
+
+    function renderDashSkeleton() {
+      if (!state.dashLoading) return;
+      const area = $('dashArea');
+      area.innerHTML = '<div class="dashboard-grid"><div class="stat-card skeleton" style="height:70px;"></div><div class="stat-card skeleton" style="height:70px;"></div><div class="stat-card skeleton" style="height:70px;"></div></div>';
+    }
+
     // ---------- DASHBOARD ----------
     function loadDashboard() {
-      $('dashArea').textContent = 'Carregando...';
+      setLoading('dash', true);
+      renderDashSkeleton();
       promiseCall('getDashboardData', null).then(data => {
         const html = [];
         html.push('<div class="dashboard-grid">');
@@ -702,7 +774,7 @@
         html.push('</ul></div>');
 
         $('dashArea').innerHTML = html.join('');
-      }).catch(e => { console.error(e); $('dashArea').textContent = 'Erro ao carregar'; });
+      }).catch(e => { console.error(e); $('dashArea').textContent = 'Erro ao carregar'; }).finally(()=> setLoading('dash', false));
     }
 
     // ---------- START ----------
