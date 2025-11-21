@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NAC — Ocorrências</title>
+  <style>
+    :root{
+      --navy:#123456;
+      --accent:#2F80ED;
+      --muted:#9aa6b2;
+      --bg:#f5f7f9;
+      --card:#ffffff;
+      --radius:10px;
+    }
+    body{ font-family: Inter, Roboto, Arial; margin:0; background:var(--bg); color:#222; }
+    header{ background:linear-gradient(90deg, #0f3556, #123456); color:#fff; padding:14px 20px; display:flex; align-items:center; justify-content:space-between; }
+    header h1{ font-size:18px; margin:0; letter-spacing:0.2px; }
+    header .actions{ display:flex; gap:10px; align-items:center; }
+    button.btn{ background:var(--accent); color:#fff; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600; }
+    button.ghost{ background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.12); padding:6px 10px; }
+    main{ padding:18px; max-width:1200px; margin:20px auto; }
+    .card{ background:var(--card); border-radius:var(--radius); padding:14px; box-shadow: 0 1px 6px rgba(16,24,40,0.06); margin-bottom:14px;}
+    .filters{ display:flex; gap:10px; flex-wrap:wrap; align-items:end; }
+    label{ font-size:13px; color:var(--muted); }
+    input[type="text"], input[type="date"], select, textarea { padding:8px 10px; border-radius:8px; border:1px solid #e6eef6; background:#fff; }
+    table{ width:100%; border-collapse:collapse; font-size:13px; }
+    th,td{ padding:8px 10px; text-align:left; border-bottom:1px solid #f1f3f5;}
+    .row-actions button{ margin-right:6px; }
+    .two-cols{ display:grid; grid-template-columns: 1fr 380px; gap:16px; align-items:start; }
+    .small{ font-size:12px; color:var(--muted); }
+    /* modal */
+    .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; z-index:9999;}
+    .modal{ width:720px; max-width:95%; background:#fff; border-radius:12px; padding:16px; box-shadow: 0 6px 24px rgba(16,24,40,0.2) }
+    .modal header{ display:flex; align-items:center; justify-content:space-between; }
+    .form-grid{ display:grid; grid-template-columns: 1fr 1fr; gap:10px;}
+    .attachments-list{ margin-top:8px; font-size:13px; }
+    .pill{ background:#f1f7ff; color:var(--navy); padding:6px 8px; border-radius:999px; font-size:12px; display:inline-block; margin-right:6px;}
+    .center{ text-align:center; }
+    @media(max-width:900px){ .two-cols{ grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>NAC — Ocorrências (Web App)</h1>
+    <div class="actions">
+      <div id="userEmail" class="small" style="color:#cfe3ff; margin-right:12px;">Carregando...</div>
+      <button class="btn" id="newBtn">Nova Ocorrência</button>
+      <button class="ghost" id="dashBtn">Dashboard</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h3 style="margin:0 0 6px 0;">Ocorrências</h3>
+          <div class="small">Lista de registros — busque, filtre e abra para editar.</div>
+        </div>
+        <div class="small" id="summaryTop"></div>
+      </div>
+
+      <div style="margin-top:12px" class="filters">
+        <div>
+          <label>Busca</label><br>
+          <input type="text" id="searchInput" placeholder="ID, assessor ou texto..." style="width:260px">
+        </div>
+        <div>
+          <label>Assessor</label><br>
+          <select id="filterAssessor"><option value="">(todos)</option></select>
+        </div>
+        <div>
+          <label>Tipo</label><br>
+          <select id="filterType"><option value="">(todos)</option></select>
+        </div>
+        <div>
+          <label>Status</label><br>
+          <select id="filterStatus"><option value="">(todos)</option><option>Aberta</option><option>Em andamento</option><option>Concluída</option><option>Cancelada</option></select>
+        </div>
+        <div>
+          <label>De</label><br>
+          <input type="date" id="filterStart">
+        </div>
+        <div>
+          <label>Até</label><br>
+          <input type="date" id="filterEnd">
+        </div>
+        <div style="align-self:end;">
+          <button class="btn" id="btnSearch">Buscar</button>
+        </div>
+      </div>
+
+      <div style="margin-top:14px;" id="listArea"></div>
+      <div id="pagination" style="margin-top:10px; text-align:right;"></div>
+    </div>
+
+    <div class="card">
+      <h4 style="margin:0 0 8px 0;">Dashboard</h4>
+      <div id="dashArea" class="small">Carregando indicadores...</div>
+    </div>
+  </main>
+
+  <!-- Modal (inserido dinamicamente) -->
+  <div id="modalContainer"></div>
+
+  <script>
+    // ---------- HELPERS ----------
+    const $ = (id) => document.getElementById(id);
+
+    function serverCall(fn, arg, onSuccess, onFailure) {
+      // wrapper simplificado para google.script.run
+      const call = google.script.run.withSuccessHandler(onSuccess);
+      if (onFailure) call.withFailureHandler(onFailure);
+      // chamar a função
+      call[fn](arg);
+    }
+
+    // Promise wrapper for specific functions
+    function promiseCall(fn, arg) {
+      return new Promise((resolve,reject) => {
+        const call = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+        call[fn](arg);
+      });
+    }
+
+    // salvar base64 file (retorna url)
+    function saveFilePromise(name, mime, base64) {
+      return new Promise((resolve,reject) => {
+        google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).saveBase64File(name, mime, base64);
+      });
+    }
+
+    // ---------- STATE ----------
+    let CONFIG = null;
+    let CURRENT_PAGE = 1;
+    const PAGE_SIZE = 20;
+
+    // ---------- INIT ----------
+    function init() {
+      // carregar configs
+      promiseCall('getConfigData', null).then(res => {
+        CONFIG = res;
+        $('userEmail').textContent = res.user || '';
+        populateFilters(res);
+        loadList();
+        loadDashboard();
+      }).catch(e => { console.error(e); alert('Erro ao carregar configuração'); });
+      // events
+      $('btnSearch').addEventListener('click', () => { CURRENT_PAGE = 1; loadList(); });
+      $('newBtn').addEventListener('click', openCreateModal);
+      $('dashBtn').addEventListener('click', loadDashboard);
+    }
+
+    function populateFilters(res) {
+      const aSel = $('filterAssessor');
+      aSel.innerHTML = '<option value="">(todos)</option>';
+      (res.assessores || []).forEach(a => {
+        const name = a.assessor_name || a.name || a.assessor;
+        const opt = document.createElement('option'); opt.value = name; opt.textContent = name;
+        aSel.appendChild(opt);
+      });
+      const tSel = $('filterType'); tSel.innerHTML = '<option value="">(todos)</option>';
+      (res.tipos||[]).forEach(t => {
+        const name = t.type_name || t.name;
+        const opt = document.createElement('option'); opt.value = name; opt.textContent = name;
+        tSel.appendChild(opt);
+      });
+    }
+
+    // ---------- LIST & RENDER ----------
+    function loadList() {
+      const params = {
+        page: CURRENT_PAGE, pageSize: PAGE_SIZE,
+        search: $('searchInput').value || '',
+        assessor_name: $('filterAssessor').value || '',
+        type_name: $('filterType').value || '',
+        status: $('filterStatus').value || '',
+        startDate: $('filterStart').value || '',
+        endDate: $('filterEnd').value || ''
+      };
+      promiseCall('listOccurrences', params).then(res => {
+        renderList(res.rows || [], res.total || 0, res.page || 1, res.pageSize || PAGE_SIZE);
+      }).catch(e => { console.error(e); alert('Erro ao listar'); });
+    }
+
+    function renderList(rows, total, page, pageSize) {
+      const area = $('listArea'); area.innerHTML = '';
+      if (!rows.length) { area.innerHTML = '<div class="small center">Sem registros</div>'; $('summaryTop').textContent = ''; $('pagination').innerHTML=''; return; }
+      // tabela
+      const tbl = document.createElement('table');
+      const thead = document.createElement('thead');
+      thead.innerHTML = '<tr><th>ID</th><th>Data</th><th>Assessor</th><th>Tipo</th><th>Status</th><th>Descrição</th><th>Ações</th></tr>';
+      tbl.appendChild(thead);
+      const tbody = document.createElement('tbody');
+      rows.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${r.occurrence_id||''}</td>
+                        <td>${(r.date_time||'')}</td>
+                        <td>${r.assessor_name||''}</td>
+                        <td>${r.type_name||''}</td>
+                        <td>${r.status||''}</td>
+                        <td>${(r.description||'').slice(0,120).replace(/\n/g,' ')}${(r.description||'').length>120?'...':''}</td>
+                        <td class="row-actions"></td>`;
+        const actions = tr.querySelector('.row-actions');
+        const viewBtn = document.createElement('button'); viewBtn.className='btn'; viewBtn.style.padding='6px 8px'; viewBtn.textContent='Abrir';
+        viewBtn.addEventListener('click', ()=> openViewModal(r.occurrence_id));
+        const editBtn = document.createElement('button'); editBtn.className='btn'; editBtn.style.background='#2bb673'; editBtn.style.marginLeft='6px'; editBtn.textContent='Editar';
+        editBtn.addEventListener('click', ()=> openEditModal(r.occurrence_id));
+        const delBtn = document.createElement('button'); delBtn.className='btn'; delBtn.style.background='#ff6b6b'; delBtn.style.marginLeft='6px'; delBtn.textContent='Cancelar';
+        delBtn.addEventListener('click', ()=> { if(confirm('Confirmar cancelar esta ocorrência?')) deleteRec(r.occurrence_id); });
+        actions.appendChild(viewBtn); actions.appendChild(editBtn); actions.appendChild(delBtn);
+        tbody.appendChild(tr);
+      });
+      tbl.appendChild(tbody);
+      area.appendChild(tbl);
+
+      // resumo e paginação
+      $('summaryTop').textContent = `Mostrando ${Math.min(total, (page-1)*pageSize+1)}–${Math.min(total,page*pageSize)} de ${total}`;
+      renderPagination(total, page, pageSize);
+    }
+
+    function renderPagination(total, page, pageSize) {
+      const pages = Math.ceil(total / pageSize) || 1;
+      const el = $('pagination'); el.innerHTML = '';
+      if (pages <= 1) return;
+      const start = Math.max(1, page-2);
+      const end = Math.min(pages, page+2);
+      if (page>1) {
+        const p1 = document.createElement('button'); p1.className='btn'; p1.textContent='‹ Prev'; p1.addEventListener('click', ()=> { CURRENT_PAGE--; loadList(); });
+        el.appendChild(p1);
+      }
+      for (let p = start; p <= end; p++) {
+        const b = document.createElement('button'); b.textContent=p; b.style.margin='0 4px';
+        if (p===page) { b.style.fontWeight='700'; b.style.background='#e6f2ff'; }
+        b.addEventListener('click', ()=> { CURRENT_PAGE = p; loadList(); });
+        el.appendChild(b);
+      }
+      if (page < pages) {
+        const pn = document.createElement('button'); pn.className='btn'; pn.textContent='Next ›'; pn.addEventListener('click', ()=> { CURRENT_PAGE++; loadList(); });
+        el.appendChild(pn);
+      }
+    }
+
+    // ---------- CRUD MODALS ----------
+    function openCreateModal() {
+      openModal({mode:'create'});
+    }
+    function openViewModal(id) {
+      promiseCall('getOccurrenceById', id).then(r => openModal({mode:'view', data:r})).catch(e=>console.error(e));
+    }
+    function openEditModal(id) {
+      promiseCall('getOccurrenceById', id).then(r => openModal({mode:'edit', data:r})).catch(e=>console.error(e));
+    }
+
+    function openModal(opts) {
+      const container = $('modalContainer');
+      container.innerHTML = '';
+      const backdrop = document.createElement('div'); backdrop.className='modal-backdrop';
+      const modal = document.createElement('div'); modal.className='modal';
+      // header
+      const header = document.createElement('header');
+      const title = document.createElement('h3'); title.style.margin='0'; title.textContent = opts.mode === 'create' ? 'Nova Ocorrência' : (opts.mode==='view'?'Visualizar':'Editar') + ' Ocorrência';
+      const closeBtn = document.createElement('button'); closeBtn.className='ghost'; closeBtn.textContent='Fechar'; closeBtn.addEventListener('click', ()=> container.innerHTML='');
+      header.appendChild(title); header.appendChild(closeBtn);
+      modal.appendChild(header);
+
+      // body
+      const body = document.createElement('div'); body.style.marginTop='8px';
+      const html = document.createElement('div');
+      html.innerHTML = `
+        <div class="form-grid">
+          <div>
+            <label>Data</label><br>
+            <input type="date" id="m_date"><br>
+          </div>
+          <div>
+            <label>Hora</label><br>
+            <input type="time" id="m_time" value="09:00"><br>
+          </div>
+          <div>
+            <label>Assessor (nome)</label><br>
+            <input type="text" id="m_assessor_name">
+          </div>
+          <div>
+            <label>Tipo</label><br>
+            <select id="m_type_name"></select>
+          </div>
+          <div>
+            <label>Origem</label><br>
+            <select id="m_origin"></select>
+          </div>
+          <div>
+            <label>Prioridade</label><br>
+            <select id="m_priority"><option>Baixa</option><option selected>Média</option><option>Alta</option><option>Crítica</option></select>
+          </div>
+          <div>
+            <label>Status</label><br>
+            <select id="m_status"><option>Aberta</option><option>Em andamento</option><option>Concluída</option><option>Cancelada</option></select>
+          </div>
+          <div>
+            <label>Follow up</label><br>
+            <input type="date" id="m_follow">
+          </div>
+          <div style="grid-column:1 / -1;">
+            <label>Descrição</label><br>
+            <textarea id="m_description" style="width:100%; min-height:100px;"></textarea>
+          </div>
+          <div style="grid-column:1 / -1;">
+            <label>Anexos</label><br>
+            <input type="file" id="m_files" multiple><div class="attachments-list" id="m_attachments"></div>
+          </div>
+        </div>
+        <div style="margin-top:10px; text-align:right;">
+          <button class="btn" id="m_saveBtn">Salvar</button>
+          <button class="ghost" id="m_cancelBtn">Fechar</button>
+        </div>
+      `;
+      body.appendChild(html);
+      modal.appendChild(body);
+      backdrop.appendChild(modal);
+      container.appendChild(backdrop);
+
+      // preencher selects com CONFIG
+      const selType = $('m_type_name'); selType.innerHTML = '<option value=""></option>';
+      (CONFIG.tipos||[]).forEach(t => { const opt=document.createElement('option'); opt.value = t.type_name; opt.textContent=t.type_name; selType.appendChild(opt); });
+      const selOrig = $('m_origin'); selOrig.innerHTML = '<option value=""></option>';
+      (CONFIG.origens || []).forEach(o => { const opt=document.createElement('option'); opt.value = o.origin_name || o.origin; opt.textContent = o.origin_name || o.origin; selOrig.appendChild(opt); });
+
+      // modo view: somente leitura
+      if (opts.mode === 'view') {
+        const d = opts.data || {};
+        $('m_date').value = (d.date_time||'').slice(0,10);
+        $('m_time').value = (d.date_time||'').slice(11,16);
+        $('m_assessor_name').value = d.assessor_name || '';
+        $('m_type_name').value = d.type_name || '';
+        $('m_origin').value = d.origin || '';
+        $('m_priority').value = d.priority || 'Média';
+        $('m_status').value = d.status || 'Aberta';
+        $('m_follow').value = d.follow_up_date || '';
+        $('m_description').value = d.description || '';
+        $('m_files').style.display = 'none';
+        $('m_saveBtn').style.display = 'none';
+        // attachments links
+        const attDiv = $('m_attachments');
+        attDiv.innerHTML = '';
+        (String(d.attachments||'').split(';').filter(Boolean)).forEach(u => {
+          const a = document.createElement('a'); a.href = u; a.target='_blank'; a.textContent = u; a.style.display='block';
+          attDiv.appendChild(a);
+        });
+      } else {
+        // create or edit
+        if (opts.data) {
+          const d = opts.data;
+          $('m_date').value = (d.date_time||'').slice(0,10);
+          $('m_time').value = (d.date_time||'').slice(11,16) || '09:00';
+          $('m_assessor_name').value = d.assessor_name || '';
+          $('m_type_name').value = d.type_name || '';
+          $('m_origin').value = d.origin || '';
+          $('m_priority').value = d.priority || 'Média';
+          $('m_status').value = d.status || 'Aberta';
+          $('m_follow').value = d.follow_up_date || '';
+          $('m_description').value = d.description || '';
+          const attDiv = $('m_attachments'); attDiv.innerHTML = '';
+          (String(d.attachments||'').split(';').filter(Boolean)).forEach(u => {
+            const a = document.createElement('a'); a.href=u; a.target='_blank'; a.textContent=u; a.style.display='block'; attDiv.appendChild(a);
+          });
+        }
+        // evento salvar
+        $('m_saveBtn').addEventListener('click', async ()=> {
+          $('m_saveBtn').textContent = 'Salvando...'; $('m_saveBtn').disabled=true;
+          // processar anexos (ler files e enviar para server)
+          const files = $('m_files').files;
+          const attachmentsUrls = [];
+          for (let i=0; i<files.length; i++) {
+            const f = files[i];
+            const base64 = await fileToBase64(f);
+            // base64 format: data:<mime>;base64,<data>
+            const parts = base64.split(',');
+            const meta = parts[0]; const raw = parts[1];
+            // enviar para server
+            try {
+              const url = await saveFilePromise(f.name, f.type || 'application/octet-stream', raw);
+              attachmentsUrls.push(url);
+            } catch(err) {
+              console.error('Erro upload', err);
+              alert('Falha no upload do arquivo: ' + f.name);
+            }
+          }
+          // montar objeto
+          const obj = {
+            date: $('m_date').value,
+            time: $('m_time').value,
+            assessor_name: $('m_assessor_name').value,
+            type_name: $('m_type_name').value,
+            origin: $('m_origin').value,
+            priority: $('m_priority').value,
+            status: $('m_status').value,
+            description: $('m_description').value,
+            attachments: attachmentsUrls.join(';')
+          };
+          if (opts.mode === 'create') {
+            promiseCall('createOccurrence', obj).then(res => {
+              alert('Criado: ' + res.id); container.innerHTML=''; loadList(); loadDashboard();
+            }).catch(e => { console.error(e); alert('Erro ao criar'); }).finally(()=>{ $('m_saveBtn').textContent='Salvar'; $('m_saveBtn').disabled=false; });
+          } else {
+            // update existing
+            const id = opts.data.occurrence_id;
+            promiseCall('updateOccurrence', {id:id, data:obj}).then(res => {
+              alert('Atualizado'); container.innerHTML=''; loadList(); loadDashboard();
+            }).catch(e => { console.error(e); alert('Erro ao atualizar'); }).finally(()=>{ $('m_saveBtn').textContent='Salvar'; $('m_saveBtn').disabled=false; });
+          }
+        });
+      }
+
+      $('m_cancelBtn').addEventListener('click', ()=> container.innerHTML='');
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onload = function(e) { resolve(e.target.result); };
+        fr.onerror = reject;
+        fr.readAsDataURL(file);
+      });
+    }
+
+    function deleteRec(id) {
+      promiseCall('deleteOccurrence', id).then(res => { alert('Marcado como Cancelada'); loadList(); loadDashboard(); }).catch(e => { console.error(e); alert('Erro ao cancelar'); });
+    }
+
+    // ---------- DASHBOARD ----------
+    function loadDashboard() {
+      $('dashArea').textContent = 'Carregando...';
+      promiseCall('getDashboardData', null).then(data => {
+        const html = [];
+        html.push(`<div style="display:flex; gap:12px; flex-wrap:wrap;">`);
+        html.push(`<div style="background:#fff; padding:12px; border-radius:10px; min-width:160px;"><div class="small">Total</div><div style="font-size:20px; font-weight:700">${data.total||0}</div></div>`);
+        html.push(`<div style="background:#fff; padding:12px; border-radius:10px; min-width:160px;"><div class="small">Avg Resolução (dias)</div><div style="font-size:20px; font-weight:700">${data.avgResolutionDays ? data.avgResolutionDays.toFixed(1) : '—'}</div></div>`);
+        html.push(`</div>`);
+        html.push('<div style="margin-top:10px;">');
+        html.push('<div style="display:flex; gap:12px; flex-wrap:wrap;">');
+        html.push('<div style="min-width:240px;"><h4 style="margin:6px 0 8px 0;">Por Status</h4>');
+        for (let k in data.byStatus) html.push(`<div class="pill">${k}: ${data.byStatus[k]}</div>`);
+        html.push('</div>');
+        html.push('<div style="min-width:240px;"><h4 style="margin:6px 0 8px 0;">Por Tipo</h4>');
+        const types = Object.keys(data.byType).sort((a,b)=>data.byType[b]-data.byType[a]).slice(0,8);
+        types.forEach(t => html.push(`<div class="pill">${t}: ${data.byType[t]}</div>`));
+        html.push('</div></div></div>');
+        html.push('<div style="margin-top:12px;"><h4>Últimas ocorrências</h4>');
+        html.push('<ul>');
+        (data.latest||[]).forEach(l => html.push(`<li style="margin-bottom:8px;"><strong>${l.occurrence_id}</strong> — ${l.type_name} — ${l.assessor_name||''} — ${l.status}</li>`));
+        html.push('</ul></div>');
+        $('dashArea').innerHTML = html.join('');
+      }).catch(e => { console.error(e); $('dashArea').textContent = 'Erro ao carregar'; });
+    }
+
+    // ---------- START ----------
+    window.addEventListener('load', init);
+  </script>
+  <script src="https://apis.google.com/js/platform.js" async defer></script>
+</body>
+</html>
