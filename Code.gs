@@ -5,6 +5,7 @@ const TIPOS_SHEET = 'Tipos_Ocorrencia';
 const ORIGENS_SHEET = 'Origens';
 const AUDIT_SHEET = 'Audit_Log';
 const ATTACH_FOLDER_PREFIX = 'NAC_Attachments_';
+const ALLOWED_STATUSES = ['Aberta','Em andamento','Concluída','Cancelada'];
 
 /** Serve o SPA */
 function doGet(e) {
@@ -138,6 +139,31 @@ function listOccurrences(params) {
   return { total: total, page: page, pageSize: pageSize, rows: pageRows };
 }
 
+/** Valida campos essenciais e sanitiza tipos básicos */
+function validateOccurrenceData(data, isUpdate) {
+  if (!data) return {valid:false, message:'Dados vazios'};
+  const str = (v) => v === undefined || v === null ? '' : String(v).trim();
+  const date = str(data.date);
+  const time = str(data.time);
+  const assessor = str(data.assessor_name);
+  const type = str(data.type_name);
+  const status = str(data.status || 'Aberta');
+  const description = str(data.description);
+  if (!date) return {valid:false, message:'Data é obrigatória'};
+  if (!time) return {valid:false, message:'Hora é obrigatória'};
+  if (!assessor) return {valid:false, message:'Assessor é obrigatório'};
+  if (!type) return {valid:false, message:'Tipo é obrigatório'};
+  if (description.length < 8) return {valid:false, message:'Descrição deve ter ao menos 8 caracteres'};
+  if (ALLOWED_STATUSES.indexOf(status) === -1) return {valid:false, message:'Status inválido'};
+  if (!isUpdate) {
+    data.status = status; // normaliza
+  }
+  data.assessor_name = assessor;
+  data.type_name = type;
+  data.description = description;
+  return {valid:true};
+}
+
 /** Deduz turno MT/SN a partir do campo shift/turno ou horário */
 function detectShift(row) {
   if (!row) return '';
@@ -202,6 +228,8 @@ function getOrCreateAttachmentFolder() {
 
 /** Cria uma ocorrência (form = objeto com campos) */
 function createOccurrence(form) {
+  const validation = validateOccurrenceData(form);
+  if (!validation.valid) throw new Error(validation.message);
   const ss = SpreadsheetApp.getActive();
   const master = ss.getSheetByName(MASTER_SHEET);
   if (!master) throw new Error('Master_Ocorrencias não encontrada.');
@@ -253,6 +281,8 @@ function updateOccurrence(id, data) {
     id = id.id;
   }
   if (!id) throw new Error('id vazio');
+  const validation = validateOccurrenceData(data, true);
+  if (!validation.valid) throw new Error(validation.message);
   const ss = SpreadsheetApp.getActive();
   const master = ss.getSheetByName(MASTER_SHEET);
   const hdr = master.getRange(1,1,1,master.getLastColumn()).getValues()[0];
