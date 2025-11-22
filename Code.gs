@@ -55,6 +55,59 @@ function getConfigData() {
   };
 }
 
+/** Normaliza nomes de cabeçalho para lidar com planilhas em inglês/português */
+function normalizeHeaderName(name) {
+  const cleaned = String(name || '').trim();
+  const key = cleaned.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  const map = {
+    occurrence_id: ['occurrence_id', 'id', 'ocorrencia_id', 'case_id', 'occurrenceid', 'ocorrenciaid'],
+    date_time: ['date_time', 'datetime', 'date', 'data', 'data_hora', 'datahora', 'timestamp'],
+    assessor_name: ['assessor_name', 'assessor', 'agent', 'owner'],
+    assessor_id: ['assessor_id', 'assessorid', 'agent_id'],
+    type_name: ['type_name', 'type', 'tipo', 'category'],
+    origin: ['origin', 'origem', 'source'],
+    priority: ['priority', 'prioridade'],
+    status: ['status', 'estado', 'situation'],
+    description: ['description', 'descricao', 'details', 'detail'],
+    action_taken: ['action_taken', 'acao', 'action'],
+    follow_up_date: ['follow_up_date', 'followup_date', 'follow_up', 'next_step_date', 'return_date'],
+    attachments: ['attachments', 'anexos', 'files'],
+    related_case_id: ['related_case_id', 'related_id', 'parent_id'],
+    created_by: ['created_by', 'criado_por', 'autor'],
+    created_at: ['created_at', 'criado_em', 'created'],
+    updated_by: ['updated_by', 'atualizado_por', 'updatedby'],
+    updated_at: ['updated_at', 'atualizado_em', 'updated'],
+    shift: ['shift', 'turno', 'turn', 'periodo'],
+    turno: ['turno'],
+    turn: ['turn']
+  };
+  for (let target in map) {
+    if (map[target].indexOf(key) >= 0) return target;
+  }
+  return cleaned;
+}
+
+/** Parser de datas que aceita ISO ou formato dd/MM/yyyy[ HH:mm] */
+function parseDateFlexible(value) {
+  if (!value) return null;
+  if (value instanceof Date && !isNaN(value)) return value;
+  const str = String(value).trim();
+  let d = new Date(str);
+  if (!isNaN(d)) return d;
+  const m = str.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (m) {
+    const day = parseInt(m[1],10);
+    const month = parseInt(m[2],10) - 1;
+    const year = parseInt(m[3],10);
+    const hour = m[4] ? parseInt(m[4],10) : 0;
+    const minute = m[5] ? parseInt(m[5],10) : 0;
+    const second = m[6] ? parseInt(m[6],10) : 0;
+    d = new Date(year, month, day, hour, minute, second);
+    if (!isNaN(d)) return d;
+  }
+  return null;
+}
+
 /** Lê master pela planilha e converte em array de objetos */
 function readMasterAsObjects() {
   const ss = SpreadsheetApp.getActive();
@@ -64,7 +117,7 @@ function readMasterAsObjects() {
   const lastCol = sh.getLastColumn();
   if (lastRow < 2) return [];
   const data = sh.getRange(1,1,lastRow,lastCol).getValues();
-  const headers = data[0].map(h => String(h||'').trim());
+  const headers = data[0].map(h => normalizeHeaderName(h));
   const out = [];
   for (let r = 1; r < data.length; r++) {
     const row = data[r];
@@ -104,31 +157,25 @@ function listOccurrences(params) {
     });
   }
 
-  // date filter (date_time stored as ISO string 'YYYY-MM-DDTHH:MM:SS' or Date object)
-  const parseDate = v => {
-    if (!v) return null;
-    if (v instanceof Date) return v;
-    try { return new Date(String(v)); } catch(e){ return null; }
-  };
   if (params.startDate) {
     const sd = new Date(params.startDate + 'T00:00:00');
     rows = rows.filter(r => {
-      const dt = parseDate(r['date_time']);
+      const dt = parseDateFlexible(r['date_time']);
       return dt && dt >= sd;
     });
   }
   if (params.endDate) {
     const ed = new Date(params.endDate + 'T23:59:59');
     rows = rows.filter(r => {
-      const dt = parseDate(r['date_time']);
+      const dt = parseDateFlexible(r['date_time']);
       return dt && dt <= ed;
     });
   }
 
   // ordenar por date_time desc
   rows.sort((a,b) => {
-    const da = parseDate(a['date_time']) || new Date(0);
-    const db = parseDate(b['date_time']) || new Date(0);
+    const da = parseDateFlexible(a['date_time']) || new Date(0);
+    const db = parseDateFlexible(b['date_time']) || new Date(0);
     return db - da;
   });
 
@@ -170,7 +217,7 @@ function detectShift(row) {
   const explicit = row['shift'] || row['turno'] || row['turn'] || row['periodo'];
   if (explicit) return String(explicit).toUpperCase();
   if (row['date_time']) {
-    const dt = row['date_time'] instanceof Date ? row['date_time'] : new Date(String(row['date_time']));
+    const dt = parseDateFlexible(row['date_time']);
     if (dt && !isNaN(dt)) return dt.getHours() < 18 ? 'MT' : 'SN';
   }
   return '';
