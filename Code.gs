@@ -92,8 +92,6 @@ function parseDateFlexible(value) {
   if (!value) return null;
   if (value instanceof Date && !isNaN(value)) return value;
   const str = String(value).trim();
-  let d = new Date(str);
-  if (!isNaN(d)) return d;
   const m = str.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
   if (m) {
     const day = parseInt(m[1],10);
@@ -102,9 +100,11 @@ function parseDateFlexible(value) {
     const hour = m[4] ? parseInt(m[4],10) : 0;
     const minute = m[5] ? parseInt(m[5],10) : 0;
     const second = m[6] ? parseInt(m[6],10) : 0;
-    d = new Date(year, month, day, hour, minute, second);
+    const d = new Date(year, month, day, hour, minute, second);
     if (!isNaN(d)) return d;
   }
+  const d = new Date(str);
+  if (!isNaN(d)) return d;
   return null;
 }
 
