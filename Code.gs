@@ -9,7 +9,10 @@ const ALLOWED_STATUSES = ['Aberta','Em andamento','Concluída','Cancelada'];
 
 /** Serve o SPA */
 function doGet(e) {
-  return HtmlService.createHtmlOutputFromFile('Index')
+  // Usa o arquivo principal em minúsculas (index.html) para evitar falhas de
+  // carregamento em projetos onde o nome do arquivo é sensível a maiúsculas e
+  // minúsculas (ex.: export via clasp).
+  return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('NAC — Ocorrências')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
