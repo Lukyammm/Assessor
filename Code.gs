@@ -132,58 +132,63 @@ function readMasterAsObjects() {
  * params: {search, assessor_name, type_name, status, startDate, endDate, page, pageSize}
  */
 function listOccurrences(params) {
-  params = params || {};
-  const page = Math.max(1, parseInt(params.page || 1));
-  const pageSize = Math.max(10, parseInt(params.pageSize || 20));
-  const all = readMasterAsObjects();
+  try {
+    params = params || {};
+    const page = Math.max(1, parseInt(params.page || 1));
+    const pageSize = Math.max(10, parseInt(params.pageSize || 20));
+    const all = readMasterAsObjects();
 
-  // filtrar
-  let rows = all.filter(r => r['occurrence_id']); // somente válidos
-  if (params.search) {
-    const q = String(params.search).toLowerCase();
-    rows = rows.filter(r => (
-      (r['occurrence_id'] && String(r['occurrence_id']).toLowerCase().indexOf(q) >= 0) ||
-      (r['assessor_name'] && String(r['assessor_name']).toLowerCase().indexOf(q) >= 0) ||
-      (r['description'] && String(r['description']).toLowerCase().indexOf(q) >= 0)
-    ));
-  }
-  if (params.assessor_name) rows = rows.filter(r => String(r['assessor_name']) === String(params.assessor_name));
-  if (params.type_name) rows = rows.filter(r => String(r['type_name']) === String(params.type_name));
-  if (params.status) rows = rows.filter(r => String(r['status']) === String(params.status));
-  if (params.turno) {
-    rows = rows.filter(r => {
-      const turno = detectShift(r);
-      return turno && String(turno).toUpperCase() === String(params.turno).toUpperCase();
+    // filtrar
+    let rows = all.filter(r => r['occurrence_id']); // somente válidos
+    if (params.search) {
+      const q = String(params.search).toLowerCase();
+      rows = rows.filter(r => (
+        (r['occurrence_id'] && String(r['occurrence_id']).toLowerCase().indexOf(q) >= 0) ||
+        (r['assessor_name'] && String(r['assessor_name']).toLowerCase().indexOf(q) >= 0) ||
+        (r['description'] && String(r['description']).toLowerCase().indexOf(q) >= 0)
+      ));
+    }
+    if (params.assessor_name) rows = rows.filter(r => String(r['assessor_name']) === String(params.assessor_name));
+    if (params.type_name) rows = rows.filter(r => String(r['type_name']) === String(params.type_name));
+    if (params.status) rows = rows.filter(r => String(r['status']) === String(params.status));
+    if (params.turno) {
+      rows = rows.filter(r => {
+        const turno = detectShift(r);
+        return turno && String(turno).toUpperCase() === String(params.turno).toUpperCase();
+      });
+    }
+
+    if (params.startDate) {
+      const sd = new Date(params.startDate + 'T00:00:00');
+      rows = rows.filter(r => {
+        const dt = parseDateFlexible(r['date_time']);
+        return dt && dt >= sd;
+      });
+    }
+    if (params.endDate) {
+      const ed = new Date(params.endDate + 'T23:59:59');
+      rows = rows.filter(r => {
+        const dt = parseDateFlexible(r['date_time']);
+        return dt && dt <= ed;
+      });
+    }
+
+    // ordenar por date_time desc
+    rows.sort((a,b) => {
+      const da = parseDateFlexible(a['date_time']) || new Date(0);
+      const db = parseDateFlexible(b['date_time']) || new Date(0);
+      return db - da;
     });
+
+    const total = rows.length;
+    const startIndex = (page - 1) * pageSize;
+    const pageRows = rows.slice(startIndex, startIndex + pageSize);
+
+    return { total: total, page: page, pageSize: pageSize, rows: pageRows };
+  } catch (err) {
+    Logger.log('Erro em listOccurrences: ' + err);
+    return { total: 0, page: 1, pageSize: params && params.pageSize ? params.pageSize : 20, rows: [], error: String(err && err.message ? err.message : err) };
   }
-
-  if (params.startDate) {
-    const sd = new Date(params.startDate + 'T00:00:00');
-    rows = rows.filter(r => {
-      const dt = parseDateFlexible(r['date_time']);
-      return dt && dt >= sd;
-    });
-  }
-  if (params.endDate) {
-    const ed = new Date(params.endDate + 'T23:59:59');
-    rows = rows.filter(r => {
-      const dt = parseDateFlexible(r['date_time']);
-      return dt && dt <= ed;
-    });
-  }
-
-  // ordenar por date_time desc
-  rows.sort((a,b) => {
-    const da = parseDateFlexible(a['date_time']) || new Date(0);
-    const db = parseDateFlexible(b['date_time']) || new Date(0);
-    return db - da;
-  });
-
-  const total = rows.length;
-  const startIndex = (page - 1) * pageSize;
-  const pageRows = rows.slice(startIndex, startIndex + pageSize);
-
-  return { total: total, page: page, pageSize: pageSize, rows: pageRows };
 }
 
 /** Valida campos essenciais e sanitiza tipos básicos */
