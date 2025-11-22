@@ -461,6 +461,10 @@
         turno: $('filterTurno').value || ''
       };
       promiseCall('listOccurrences', params).then(res => {
+        if (res && res.error) {
+          alert('Erro ao listar: ' + res.error);
+          return;
+        }
         renderList(res.rows || [], res.total || 0);
       }).catch(e => { console.error(e); alert('Erro ao listar'); }).finally(()=> setLoading('list', false));
     }
