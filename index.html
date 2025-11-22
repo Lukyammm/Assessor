@@ -5,89 +5,339 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NAC — Ocorrências</title>
   <style>
-    :root{
-      --navy:#123456;
-      --blue:#02689C;
-      --blue-soft:#f0fbff;
-      --gray:#efefef;
-      --gray-2:#dbe7f1;
-      --muted:#5d6b7a;
-      --card:#ffffff;
-      --radius:12px;
-      --shadow:0 8px 26px rgba(18,52,86,0.12);
+    :root {
+      --font-body: 'Inter', 'Roboto', Arial, sans-serif;
+      --navy: #123456;
+      --blue: #02689c;
+      --blue-strong: #014c73;
+      --blue-soft: #f0fbff;
+      --gray-50: #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #dbe7f1;
+      --gray-300: #c7d2e1;
+      --muted: #5d6b7a;
+      --danger: #b91c1c;
+      --success: #22c55e;
+      --warning: #f6a63b;
+      --card: #ffffff;
+      --radius-sm: 10px;
+      --radius: 12px;
+      --shadow-sm: 0 4px 12px rgba(18, 52, 86, 0.08);
+      --shadow: 0 8px 26px rgba(18, 52, 86, 0.12);
+      --shadow-lg: 0 12px 34px rgba(16, 24, 40, 0.28);
+      --space-1: 4px;
+      --space-2: 8px;
+      --space-3: 12px;
+      --space-4: 16px;
+      --space-5: 24px;
+      --line: 1px solid var(--gray-200);
     }
-    *{ box-sizing:border-box; }
-    body{ font-family: 'Inter', 'Roboto', Arial, sans-serif; margin:0; background:linear-gradient(180deg, var(--blue-soft), #f6f9fc); color:#0f1f33; }
-    header{ background:var(--navy); color:#fff; padding:16px 24px; display:flex; align-items:center; justify-content:space-between; box-shadow:var(--shadow); position:sticky; top:0; z-index:5; }
-    header h1{ font-size:18px; margin:0; letter-spacing:0.2px; display:flex; align-items:center; gap:10px; }
-    header h1::before{ content:'⚕️'; font-size:18px; }
-    header .actions{ display:flex; gap:10px; align-items:center; }
-    button.btn{ background:var(--blue); color:#fff; border:none; padding:9px 14px; border-radius:10px; cursor:pointer; font-weight:600; box-shadow:0 6px 16px rgba(2,104,156,0.25); transition:transform .08s ease, box-shadow .08s ease; }
-    button.btn:hover{ transform:translateY(-1px); box-shadow:0 10px 20px rgba(2,104,156,0.28); }
-    button.ghost{ background:transparent; color:#fff; border:1px solid rgba(255,255,255,0.25); padding:7px 12px; border-radius:10px; }
-    main{ padding:22px; max-width:1200px; margin:0 auto; display:flex; flex-direction:column; gap:16px; }
-    .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
-    .card{ background:var(--card); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow); margin-bottom:0; border:1px solid var(--gray-2); }
-    .filters{ display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:12px; align-items:end; }
-    label{ font-size:13px; color:var(--muted); font-weight:600; }
-    input[type="text"], input[type="date"], select, textarea { padding:9px 10px; border-radius:10px; border:1px solid var(--gray-2); background:#fff; width:100%; }
-    .small{ font-size:12px; color:var(--muted); }
-    .pill{ padding:6px 10px; border-radius:999px; font-size:12px; display:inline-flex; gap:6px; align-items:center; font-weight:600; }
-    .pill.aberta{ background:#e1f1fb; color:var(--blue); }
-    .pill.andamento{ background:#fff1df; color:#f6a63b; }
-    .pill.concluida{ background:#e4f6eb; color:#22c55e; }
-    .pill.cancelada{ background:#eef1f5; color:#9aa6b2; }
-    .pill.turno{ background:#eef6ff; color:var(--navy); }
-    .pill.meta{ background:var(--gray); color:var(--navy); font-weight:700; }
-    .timeline{ display:flex; flex-direction:column; gap:12px; }
-    .day-block{ border-left:4px solid var(--blue); padding-left:12px; }
-    .day-header{ display:flex; align-items:center; justify-content:space-between; background:var(--blue-soft); padding:10px 12px; border-radius:10px; border:1px solid var(--gray-2); font-weight:700; color:var(--navy); }
-    .occ-card{ background:#fff; border-radius:12px; border:1px solid var(--gray-2); padding:12px; box-shadow:0 4px 16px rgba(18,52,86,0.1); display:flex; flex-direction:column; gap:6px; }
-    .occ-top{ display:flex; justify-content:space-between; align-items:center; gap:8px; }
-    .occ-id{ font-weight:800; color:var(--navy); }
-    .occ-meta{ font-size:12px; color:var(--muted); display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-    .occ-desc{ font-size:13px; color:#1f2b3a; background:var(--blue-soft); padding:8px 10px; border-radius:10px; border:1px solid var(--gray-2); }
-    .occ-actions{ display:flex; gap:8px; flex-wrap:wrap; }
-    .list-empty{ text-align:center; color:var(--muted); padding:24px 0; }
-    .skeleton{ animation: pulse 1.4s ease-in-out infinite; background:linear-gradient(90deg, #f5f8fb 25%, #eaeff5 50%, #f5f8fb 75%); background-size:200% 100%; }
-    @keyframes pulse { 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-body);
+      margin: 0;
+      background: linear-gradient(180deg, var(--blue-soft), #f6f9fc);
+      color: #0f1f33;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4, h5, h6 { margin: 0; color: var(--navy); }
+    p { margin: 0; }
+
+    header {
+      background: var(--navy);
+      color: #fff;
+      padding: var(--space-3) var(--space-4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+    }
+
+    header h1 {
+      font-size: 18px;
+      letter-spacing: 0.2px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    header h1::before { content: '⚕️'; font-size: 18px; }
+    header .actions { display: flex; gap: 10px; align-items: center; }
+
+    main {
+      padding: 22px;
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: var(--space-4);
+      box-shadow: var(--shadow);
+      border: var(--line);
+    }
+
+    .card__header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .card__title { margin: 0; color: var(--navy); }
+    .card__title--sm { margin: 0 0 8px 0; }
+
+    .text-light { color: #cfe3ff; }
+    .mr-3 { margin-right: var(--space-3); }
+
+    .subtitle { color: var(--muted); font-size: 13px; }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      align-items: end;
+    }
+
+    label { font-size: 13px; color: var(--muted); font-weight: 600; }
+
+    input[type="text"], input[type="date"], input[type="time"], select, textarea {
+      padding: 9px 10px;
+      border-radius: var(--radius-sm);
+      border: var(--line);
+      background: #fff;
+      width: 100%;
+      transition: border-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: none;
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(2, 104, 156, 0.18);
+    }
+
+    .small { font-size: 12px; color: var(--muted); }
+
+    .pill {
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      font-weight: 600;
+    }
+
+    .pill.aberta { background: #e1f1fb; color: var(--blue); }
+    .pill.andamento { background: #fff1df; color: var(--warning); }
+    .pill.concluida { background: #e4f6eb; color: var(--success); }
+    .pill.cancelada { background: #eef1f5; color: #9aa6b2; }
+    .pill.turno { background: #eef6ff; color: var(--navy); }
+    .pill.meta { background: var(--gray-100); color: var(--navy); font-weight: 700; }
+
+    .timeline { display: flex; flex-direction: column; gap: 12px; }
+    .day-block { border-left: 4px solid var(--blue); padding-left: 12px; }
+
+    .day-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--blue-soft);
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: var(--line);
+      font-weight: 700;
+      color: var(--navy);
+      gap: 10px;
+    }
+
+    .occ-card {
+      background: #fff;
+      border-radius: 12px;
+      border: var(--line);
+      padding: 12px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .occ-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .occ-id { font-weight: 800; color: var(--navy); }
+    .occ-meta { font-size: 12px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+    .occ-desc {
+      font-size: 13px;
+      color: #1f2b3a;
+      background: var(--blue-soft);
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: var(--line);
+    }
+
+    .occ-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .list-empty { text-align: center; color: var(--muted); padding: 24px 0; }
+
+    .skeleton {
+      animation: pulse 1.4s ease-in-out infinite;
+      background: linear-gradient(90deg, #f5f8fb 25%, #eaeff5 50%, #f5f8fb 75%);
+      background-size: 200% 100%;
+    }
+
+    .skeleton--header { height: 24px; }
+    .skeleton--card { height: 90px; }
+    .skeleton--stat { height: 70px; }
+
+    @keyframes pulse { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    .btn {
+      background: var(--blue);
+      color: #fff;
+      border: none;
+      padding: 9px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-weight: 600;
+      box-shadow: 0 6px 16px rgba(2, 104, 156, 0.25);
+      transition: transform 80ms ease, box-shadow 80ms ease, background 120ms ease;
+    }
+
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(2, 104, 156, 0.28); }
+    .btn:active { transform: translateY(0); box-shadow: 0 4px 10px rgba(2, 104, 156, 0.22); }
+
+    .btn:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(2, 104, 156, 0.22), 0 6px 16px rgba(2, 104, 156, 0.25);
+    }
+
+    .btn--ghost {
+      background: transparent;
+      color: inherit;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      padding: 7px 12px;
+      box-shadow: none;
+    }
+
+    .btn--soft { background: #eef2f7; color: var(--navy); box-shadow: none; border: 1px solid var(--gray-200); }
+    .btn--success { background: var(--success); box-shadow: 0 6px 16px rgba(34, 197, 94, 0.22); }
+    .btn--muted { background: #9aa6b2; box-shadow: 0 6px 16px rgba(154, 166, 178, 0.22); }
+    .btn--small { padding: 6px 10px; }
+
+    .btn:disabled { opacity: 0.65; cursor: not-allowed; transform: none; box-shadow: none; }
+
     /* modal */
-    .modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; z-index:9999;}
-    .modal{ width:760px; max-width:95%; background:#fff; border-radius:16px; padding:16px; box-shadow: 0 12px 34px rgba(16,24,40,0.28); border:1px solid var(--gray-2); }
-    .modal header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
-    .form-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px;}
-    .attachments-list{ margin-top:8px; font-size:13px; }
-    .section-title{ font-weight:700; color:var(--navy); margin:16px 0 8px 0; font-size:14px; }
-    .center{ text-align:center; }
-    .dashboard-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; }
-    .stat-card{ background:#fff; border:1px solid var(--gray-2); padding:12px; border-radius:12px; box-shadow:0 6px 20px rgba(18,52,86,0.08); }
-    .stat-title{ font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:0.4px; }
-    .stat-value{ font-size:22px; font-weight:800; color:var(--navy); }
-    .list-chips{ display:flex; gap:8px; flex-wrap:wrap; }
-    @media(max-width:700px){ header{flex-direction:column; align-items:flex-start; gap:10px;} .occ-top{flex-direction:column; align-items:flex-start;} }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      backdrop-filter: blur(2px);
+    }
+
+    .modal {
+      width: 760px;
+      max-width: 95%;
+      background: #fff;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: var(--shadow-lg);
+      border: var(--line);
+    }
+
+    .modal header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .attachments-list { margin-top: 8px; font-size: 13px; }
+
+    .section-title {
+      font-weight: 700;
+      color: var(--navy);
+      margin: 16px 0 8px 0;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: 0.2px;
+    }
+
+    .center { text-align: center; }
+
+    .dashboard-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .stat-card { background: #fff; border: var(--line); padding: 12px; border-radius: 12px; box-shadow: 0 6px 20px rgba(18, 52, 86, 0.08); }
+    .stat-title { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+    .stat-value { font-size: 22px; font-weight: 800; color: var(--navy); }
+    .list-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .stack { display: flex; flex-direction: column; gap: 6px; }
+    .spacer { height: var(--space-2); }
+    .list-item { margin-bottom: 8px; color: #0f1f33; }
+    .inline-chips { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .mt-3 { margin-top: var(--space-3); }
+    .mt-4 { margin-top: var(--space-4); }
+    .self-end { align-self: end; }
+    .grid-panels { margin-top: 14px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+    .modal__body { margin-top: 8px; }
+    .modal__actions { margin-top: 14px; text-align: right; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+    .error-text { color: var(--danger); margin-top: 4px; }
+    .block-link { display: block; word-break: break-all; color: var(--blue); text-decoration: none; }
+    .block-link:hover { text-decoration: underline; }
+    .textarea-lg { min-height: 110px; }
+
+    @media (max-width: 700px) {
+      header { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .occ-top { flex-direction: column; align-items: flex-start; }
+      .card__header { align-items: flex-start; }
+    }
   </style>
 </head>
   <body>
   <header>
     <h1>NAC — Ocorrências (Web App)</h1>
     <div class="actions">
-      <div id="userEmail" class="small" style="color:#cfe3ff; margin-right:12px;">Carregando...</div>
+      <div id="userEmail" class="small text-light mr-3">Carregando...</div>
       <button class="btn" id="newBtn">Nova Ocorrência</button>
-      <button class="ghost" id="dashBtn">Dashboard</button>
+      <button class="btn btn--ghost" id="dashBtn">Dashboard</button>
     </div>
   </header>
 
   <main>
     <div class="card">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
-        <div>
-          <h3 style="margin:0 0 6px 0; color:var(--navy);">Fluxo de Ocorrências (NAC)</h3>
+      <div class="card__header">
+        <div class="stack">
+          <h3 class="card__title">Fluxo de Ocorrências (NAC)</h3>
           <div class="small">Organizado por dia → turno → ocorrência, como na planilha do plantão.</div>
         </div>
         <div class="small" id="summaryTop"></div>
       </div>
 
-      <div style="margin-top:12px" class="filters">
+      <div class="filters mt-3">
         <div>
           <label>Dia</label><br>
           <input type="date" id="filterStart">
@@ -112,16 +362,16 @@
           <label>Busca rápida</label><br>
           <input type="text" id="searchInput" placeholder="ID, assessor ou texto..." aria-label="Buscar por ID, assessor ou texto">
         </div>
-        <div style="align-self:end;">
+        <div class="self-end">
           <button class="btn" id="btnSearch">Buscar</button>
         </div>
       </div>
 
-      <div style="margin-top:14px;" id="listArea"></div>
+      <div class="mt-4" id="listArea"></div>
     </div>
 
     <div class="card">
-      <h4 style="margin:0 0 8px 0; color:var(--navy);">Painel rápido</h4>
+      <h4 class="card__title card__title--sm">Painel rápido</h4>
       <div id="dashArea" class="small">Carregando indicadores...</div>
     </div>
   </main>
@@ -238,7 +488,7 @@
           card.innerHTML = `
             <div class="occ-top">
               <div class="occ-id">[${r.occurrence_id||''}]</div>
-              <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">${turnoPill}${statusPill}</div>
+              <div class="inline-chips">${turnoPill}${statusPill}</div>
             </div>
             <div class="occ-meta">
               <span>${formatTime(r.date_time)}</span>
@@ -251,9 +501,9 @@
             <div class="occ-actions"></div>
           `;
           const actions = card.querySelector('.occ-actions');
-          const open = document.createElement('button'); open.className='btn'; open.textContent='Abrir'; open.style.padding='6px 10px'; open.addEventListener('click', ()=> openViewModal(r.occurrence_id));
-          const edit = document.createElement('button'); edit.className='btn'; edit.style.background='#22c55e'; edit.textContent='Editar'; edit.style.padding='6px 10px'; edit.addEventListener('click', ()=> openEditModal(r.occurrence_id));
-          const cancel = document.createElement('button'); cancel.className='btn'; cancel.style.background='#9aa6b2'; cancel.textContent='Cancelar'; cancel.style.padding='6px 10px'; cancel.addEventListener('click', ()=> { if(confirm('Confirmar cancelar esta ocorrência?')) deleteRec(r.occurrence_id); });
+          const open = document.createElement('button'); open.className='btn btn--small'; open.textContent='Abrir'; open.addEventListener('click', ()=> openViewModal(r.occurrence_id));
+          const edit = document.createElement('button'); edit.className='btn btn--small btn--success'; edit.textContent='Editar'; edit.addEventListener('click', ()=> openEditModal(r.occurrence_id));
+          const cancel = document.createElement('button'); cancel.className='btn btn--small btn--muted'; cancel.textContent='Cancelar'; cancel.addEventListener('click', ()=> { if(confirm('Confirmar cancelar esta ocorrência?')) deleteRec(r.occurrence_id); });
           actions.appendChild(open); actions.appendChild(edit); actions.appendChild(cancel);
           list.appendChild(card);
         });
@@ -324,13 +574,13 @@
       const modal = document.createElement('div'); modal.className='modal';
       // header
       const header = document.createElement('header');
-      const title = document.createElement('h3'); title.style.margin='0'; title.textContent = opts.mode === 'create' ? 'Nova Ocorrência' : (opts.mode==='view'?'Visualizar':'Editar') + ' Ocorrência';
-      const closeBtn = document.createElement('button'); closeBtn.className='ghost'; closeBtn.textContent='Fechar'; closeBtn.addEventListener('click', ()=> container.innerHTML='');
+      const title = document.createElement('h3'); title.textContent = opts.mode === 'create' ? 'Nova Ocorrência' : (opts.mode==='view'?'Visualizar':'Editar') + ' Ocorrência';
+      const closeBtn = document.createElement('button'); closeBtn.className='btn btn--soft'; closeBtn.textContent='Fechar'; closeBtn.addEventListener('click', ()=> container.innerHTML='');
       header.appendChild(title); header.appendChild(closeBtn);
       modal.appendChild(header);
 
       // body
-      const body = document.createElement('div'); body.style.marginTop='8px';
+      const body = document.createElement('div'); body.className='modal__body';
       const html = document.createElement('div');
       html.innerHTML = `
         <div class="section-title">Dados principais</div>
@@ -361,7 +611,7 @@
           </div>
         </div>
         <div class="section-title">Descrição</div>
-        <textarea id="m_description" style="width:100%; min-height:110px;" aria-required="true" minlength="8"></textarea>
+        <textarea id="m_description" class="textarea-lg" aria-required="true" minlength="8"></textarea>
         <div class="section-title">Complementos</div>
         <div class="form-grid">
           <div>
@@ -380,9 +630,9 @@
         <div class="section-title">Anexos</div>
         <input type="file" id="m_files" multiple aria-label="Anexar arquivos">
         <div class="attachments-list" id="m_attachments"></div>
-        <div id="m_errors" class="small" style="color:#b91c1c; margin-top:4px;"></div>
-        <div style="margin-top:14px; text-align:right; display:flex; justify-content:flex-end; gap:10px; flex-wrap:wrap;">
-          <button class="ghost" id="m_cancelBtn">Fechar</button>
+        <div id="m_errors" class="small error-text"></div>
+        <div class="modal__actions">
+          <button class="btn btn--soft" id="m_cancelBtn">Fechar</button>
           <button class="btn" id="m_saveBtn">Salvar</button>
         </div>
       `;
@@ -418,7 +668,8 @@
         const attDiv = $('m_attachments');
         attDiv.innerHTML = '';
         (String(d.attachments||'').split(';').filter(Boolean)).forEach(u => {
-          const a = document.createElement('a'); a.href = u; a.target='_blank'; a.textContent = u; a.style.display='block';
+          const a = document.createElement('a');
+          a.href = u; a.target='_blank'; a.textContent = u; a.className='block-link';
           attDiv.appendChild(a);
         });
       } else {
@@ -437,7 +688,7 @@
           $('m_description').value = d.description || '';
           const attDiv = $('m_attachments'); attDiv.innerHTML = '';
           (String(d.attachments||'').split(';').filter(Boolean)).forEach(u => {
-            const a = document.createElement('a'); a.href=u; a.target='_blank'; a.textContent=u; a.style.display='block'; attDiv.appendChild(a);
+            const a = document.createElement('a'); a.href=u; a.target='_blank'; a.textContent=u; a.className='block-link'; attDiv.appendChild(a);
           });
         }
         // evento salvar
@@ -526,7 +777,7 @@
         html.push(`<div class="stat-card"><div class="stat-title">Turno</div><div class="list-chips"><span class="pill turno">MT: ${data.byShift?.MT||0}</span><span class="pill turno">SN: ${data.byShift?.SN||0}</span></div></div>`);
         html.push('</div>');
 
-        html.push('<div style="margin-top:14px; display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap:12px;">');
+        html.push('<div class="grid-panels">');
         html.push('<div class="stat-card"><div class="stat-title">Totais por dia (últimos 7)</div><div class="list-chips">');
         (data.totalsByDay||[]).forEach(d => html.push(`<span class="pill meta">${d.day.split('-').reverse().join('/')} — ${d.total}</span>`));
         html.push('</div></div>');
@@ -541,8 +792,8 @@
         html.push('</div></div>');
         html.push('</div>');
 
-        html.push('<div style="margin-top:12px;" class="stat-card"><div class="stat-title">Últimas ocorrências</div><ul>');
-        (data.latest||[]).forEach(l => html.push(`<li style="margin-bottom:8px; color:#0f1f33;"><strong>${l.occurrence_id}</strong> • ${formatTime(l.date_time)} • ${inferTurno(l)} • ${l.type_name} • ${l.status}</li>`));
+        html.push('<div class="stat-card mt-3"><div class="stat-title">Últimas ocorrências</div><ul>');
+        (data.latest||[]).forEach(l => html.push(`<li class="list-item"><strong>${l.occurrence_id}</strong> • ${formatTime(l.date_time)} • ${inferTurno(l)} • ${l.type_name} • ${l.status}</li>`));
         html.push('</ul></div>');
 
         $('dashArea').innerHTML = html.join('');
@@ -577,11 +828,11 @@
       area.innerHTML = '';
       for (let i=0;i<3;i++) {
         const block = document.createElement('div'); block.className='day-block';
-        const header = document.createElement('div'); header.className='day-header skeleton'; header.style.height='24px';
+        const header = document.createElement('div'); header.className='day-header skeleton skeleton--header';
         block.appendChild(header);
         const list = document.createElement('div'); list.className='timeline';
         for (let j=0;j<2;j++) {
-          const card = document.createElement('div'); card.className='occ-card skeleton'; card.style.height='90px';
+          const card = document.createElement('div'); card.className='occ-card skeleton skeleton--card';
           list.appendChild(card);
         }
         block.appendChild(list);
@@ -592,7 +843,7 @@
     function renderDashSkeleton() {
       if (!state.dashLoading) return;
       const area = $('dashArea');
-      area.innerHTML = '<div class="dashboard-grid"><div class="stat-card skeleton" style="height:70px;"></div><div class="stat-card skeleton" style="height:70px;"></div><div class="stat-card skeleton" style="height:70px;"></div></div>';
+      area.innerHTML = '<div class="dashboard-grid"><div class="stat-card skeleton skeleton--stat"></div><div class="stat-card skeleton skeleton--stat"></div><div class="stat-card skeleton skeleton--stat"></div></div>';
     }
 
     // ---------- START ----------
